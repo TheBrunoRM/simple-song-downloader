@@ -1,27 +1,35 @@
 {
-  "dependencies": {
-    "dotenv": "^16.0.3",
-    "fluent-ffmpeg": "^2.1.2",
-    "luxon": "^3.2.1",
-    "ytdl-core": "^4.11.2",
-    "ytpl": "^2.3.0"
-  },
-  "name": "simple-song-downloader",
-  "description": "simple-song-downloader",
-  "version": "1.0.0",
-  "main": "index.js",
-  "devDependencies": {},
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/TheBrunoRM/simple-song-downloader.git"
-  },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/TheBrunoRM/simple-song-downloader/issues"
-  },
-  "homepage": "https://github.com/TheBrunoRM/simple-song-downloader#readme"
+	"dependencies": {
+		"dotenv": "^16.0.3",
+		"fluent-ffmpeg": "^2.1.2",
+		"luxon": "^3.2.1",
+		"typescript": "^4.9.4",
+		"ytdl-core": "^4.11.2",
+		"ytpl": "^2.3.0"
+	},
+	"type": "module",
+	"name": "simple-song-downloader",
+	"description": "simple-song-downloader",
+	"version": "1.0.0",
+	"main": "dist/index.js",
+	"scripts": {
+		"start": "npx tsc && node .",
+		"playlist": "npx tsc && node dist/playlist.js",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/TheBrunoRM/simple-song-downloader.git"
+	},
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/TheBrunoRM/simple-song-downloader/issues"
+	},
+	"homepage": "https://github.com/TheBrunoRM/simple-song-downloader#readme",
+	"devDependencies": {
+		"@types/fluent-ffmpeg": "^2.1.20",
+		"@types/luxon": "^3.2.0",
+		"@types/node": "^18.11.18"
+	}
 }

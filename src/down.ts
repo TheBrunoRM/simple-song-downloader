@@ -1,19 +1,23 @@
-require("dotenv").config();
+import ytdl, { downloadOptions, videoInfo } from "ytdl-core";
+import {Duration} from "luxon";
 
-const ytdl = require("ytdl-core");
-const fs = require("fs");
-const getDirName = require("path").dirname;
-const resolvePath = require("path").resolve;
-const joinPath = require("path").join;
+import 'dotenv/config';
+import ffmpeg from "fluent-ffmpeg";
+
+import fs from "fs";
+import PATH from "path";
+const getDirName = PATH.dirname;
+const resolvePath = PATH.resolve;
+const joinPath = PATH.join;
 
 const MAX_CONTENT_LENGTH = 1024 * 1024 * 16;
 const DOWNLOAD_PATH = "downloaded";
 
 let downloading = false;
 
-const OPTIONS = {
+const OPTIONS: downloadOptions = {
 	quality: "highestaudio",
-	filter: (f) => "audioonly",
+	filter: "audioonly",
 	highWaterMark: MAX_CONTENT_LENGTH,
 	requestOptions: {
 		headers: {
@@ -22,21 +26,23 @@ const OPTIONS = {
 	},
 };
 
-function parseMB(bytes) {
+function parseMB(bytes: number) {
 	return (bytes / 1024 / 1024).toFixed(2);
 }
 
-async function getInfo(url) {
+export async function getInfo(url: string) {
 	console.log("getting info for: " + url);
 	const info = await ytdl.getInfo(url);
 	logInfo(info);
 	return info;
 }
 
-async function down(info, folder = "") {
+export async function down(thing: videoInfo | string, folder = "") {
 	downloading = true;
 
-	if (typeof info === "string") info = await getInfo(info);
+	let info: videoInfo;
+	if(typeof thing === "string") info = await getInfo(thing);
+	else info = <videoInfo> thing;
 
 	const format = ytdl.chooseFormat(info.formats, {
 		quality: OPTIONS.quality,
@@ -52,6 +58,11 @@ async function down(info, folder = "") {
 		/[/\\?%*:|"<>]/g,
 		"-"
 	);
+	const finalFilePath = joinPath(parentPath, fileName + ".mp3");
+	if (fs.existsSync(finalFilePath)) {
+		console.log("Final file already exists, not downloading.");
+		return;
+	}
 	const path = joinPath(parentPath, "ogg", fileName + ".ogg");
 	console.log("path: " + path);
 	await fs.mkdirSync(getDirName(path), { recursive: true });
@@ -60,23 +71,23 @@ async function down(info, folder = "") {
 	console.log("bytes written: " + bytesWritten.length);
 	console.log("content length: " + format.contentLength);
 
-	let options = {
+	let options: downloadOptions = {
 		...OPTIONS,
-		range: { start: bytesWritten.length, end: format.contentLength },
+		range: { start: bytesWritten.length, end: parseInt(format.contentLength) },
 	};
 
-	if (bytesWritten.length < format.contentLength) {
+	if (bytesWritten.length < parseInt(format.contentLength)) {
 		const downloaded = ytdl.downloadFromInfo(info, options);
-		await new Promise(async (resolve, reject) => {
+		await new Promise<void>(async (resolve, _reject) => {
 			console.log("starting download of: " + info.videoDetails.title);
-			let lastAnnounce;
+			let lastAnnounce: number;
 			downloaded.on("info", (_info, _format) => {
 				console.log("got information for " + info.videoDetails.title);
 			});
 
 			downloaded.on("data", (data) => fs.writeSync(stream, data));
 
-			downloaded.on("progress", (len, cur, tot) => {
+			downloaded.on("progress", (_len, cur, tot) => {
 				if (!lastAnnounce || Date.now() > lastAnnounce + 5 * 1000) {
 					const per = (cur / tot) * 100;
 					console.log(
@@ -106,42 +117,38 @@ async function down(info, folder = "") {
 	} else {
 		console.log("file is fully downloaded.");
 	}
-	const finalFilePath = joinPath(parentPath, fileName + ".mp3");
-	if (!fs.existsSync(finalFilePath)) {
-		console.log("processing with ffmpeg...");
-		await new Promise((resolve, reject) => {
-			require("fluent-ffmpeg")(path)
-				.format("mp3")
-				.audioCodec("libmp3lame")
-				.on("progress", function (progress) {
-					console.log("Processing: " + progress.percent + "% done");
-				})
-				.on("end", function () {
-					console.log("Processing finished!");
-					resolve();
-				})
-				.save(finalFilePath);
-		});
-	} else {
-		console.log("final file already exists, not processing.");
-	}
+	console.log("processing with ffmpeg...");
+	await new Promise<void>((resolve, _reject) => {
+		ffmpeg(path)
+			.format("mp3")
+			.audioCodec("libmp3lame")
+			.on("progress", function (progress: any) {
+				console.log("Processing: " + progress.percent + "% done");
+			})
+			.on("end", function () {
+				console.log("Processing finished!");
+				resolve();
+			})
+			.save(finalFilePath);
+	});
 	downloading = false;
 	return true;
 }
 
-function truncateName(str, max = 200) {
+function truncateName(str: string, max = 200) {
 	if (str.trim().length <= max) return str.trim();
 	return str.slice(0, max).trim();
 }
 
-function logInfo(info) {
+function logInfo(info: videoInfo) {
 	console.log("Video name: " + info.videoDetails.title);
 	console.log("Author:" + info.videoDetails.author.name);
 	console.log("Category: " + info.videoDetails.category);
-	const duration = require("luxon")
-		.Duration.fromObject({ seconds: info.videoDetails.lengthSeconds })
+	const duration = Duration.fromObject({ seconds: parseInt(info.videoDetails.lengthSeconds) })
 		.toFormat("hh:mm:ss");
 	console.log("Video length: " + duration);
 }
 
-module.exports = { down, getInfo, downloading: () => downloading };
+export function isDownloading(): boolean {
+	return downloading;
+}

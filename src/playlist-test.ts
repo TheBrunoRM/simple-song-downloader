@@ -1,5 +1,5 @@
-const ytpl = require("ytpl");
-const { down } = require("./down.js");
+import ytpl from "ytpl";
+import { down } from "./down.js";
 
 const playlists = [
 	"PL36384B2DAC7D315B", // just one for now, to test
