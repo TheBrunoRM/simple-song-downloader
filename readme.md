@@ -1,4 +1,6 @@
-simple-song-downloader
+# simple-song-downloader
+
+### Downloads songs and playslists from YouTube
 
 I initially intented to make this tool to download entire playlists at once.
 
