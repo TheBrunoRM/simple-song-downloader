@@ -1,14 +1,10 @@
-import downloader from "./down.js";
+import downloader from "./downloader";
 function main() {
-    console.log("type the link of the video you want to download: ");
+    console.log("Type the link to the song you want to download:");
     const stdin = process.openStdin();
-    stdin.addListener("data", onData);
-}
-async function onData(data) {
-    if (downloader.isDownloading())
-        return;
-    const url = data.toString().trim();
-    console.log("downloading: " + url);
-    await downloader.down(url);
+    stdin.addListener("data", (data) => {
+        const url = data.toString().trim();
+        downloader.add(url);
+    });
 }
 main();

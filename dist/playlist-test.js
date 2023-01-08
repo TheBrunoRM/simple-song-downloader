@@ -1,5 +1,5 @@
 import ytpl from "ytpl";
-import { down } from "./down.js";
+import downloader from "./downloader";
 const playlists = [
     "PL36384B2DAC7D315B",
 ];
@@ -11,8 +11,7 @@ async function test() {
         const items = playlist.items.slice(0, 5);
         console.log(`downloading ${items.length} videos for playlist: ${playlist.title}`);
         for (const item of items) {
-            await down(item.id, "/test/" + playlist.title);
-            break;
+            downloader.add(item.url, "/test/" + playlist.title);
         }
         break;
     }
