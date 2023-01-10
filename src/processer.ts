@@ -8,7 +8,9 @@ import { Song } from "./song";
  * @param finalFilePath the path where the .mp3 will be written to
  */
 export async function processOpus(downloadPath: string, finalFilePath: string) {
-	console.log("processing with ffmpeg...");
+	console.log(
+		"processing with ffmpeg: " + downloadPath + " to " + finalFilePath
+	);
 	return new Promise<void>((resolve, _reject) => {
 		ffmpeg(downloadPath)
 			.format("mp3")
@@ -27,6 +29,7 @@ export async function processOpus(downloadPath: string, finalFilePath: string) {
 export async function work(song: Song) {
 	song.processing = true;
 	await processOpus(song.downloadPath, song.finalFilePath);
+	song.processing = false;
 	song.processed = true;
 }
 

@@ -6,6 +6,11 @@ import { Song } from "./song";
 import Queuer from "./queuer";
 import "dotenv/config";
 
+export class TrackMetadata {
+	username: string;
+	title: string;
+}
+
 /**
  * This method fetches the client ID by sending a request to the Soundclod webpage
  * and then gets the client ID by fetching the scripts and searching for it on the files.
@@ -42,7 +47,7 @@ async function fetchClientID() {
  *
  * @param url The URL that links to the Soundcloud track
  */
-export async function download(url: string): Promise<void> {
+export async function download(url: string): Promise<TrackMetadata> {
 	if (!url) {
 		console.error("No URL provided!");
 		return;
@@ -91,6 +96,10 @@ export async function download(url: string): Promise<void> {
 	// Track metadata
 	const username = info["user"]["username"];
 	const title = info["title"];
+
+	const metadata = new TrackMetadata();
+	metadata.username = username;
+	metadata.title = title;
 
 	// The final file path where the data will be written
 	let finalPath = path.join(
@@ -145,7 +154,7 @@ export async function download(url: string): Promise<void> {
 		return;
 	}
 
-	return new Promise<void>((resolve, reject) => {
+	return new Promise<TrackMetadata>((resolve, _reject) => {
 		// Writing the data
 		let writtenBytes = 0;
 		stream.on("data", (data) => {
@@ -161,14 +170,15 @@ export async function download(url: string): Promise<void> {
 		// Finished downloading
 		stream.on("end", () => {
 			console.log("finished downloading the file: " + finalPath);
-			resolve();
+			resolve(metadata);
 		});
 	});
 }
 
 export async function work(song: Song) {
 	song.downloading = true;
-	await download(song.url);
+	const metadata = await download(song.url);
+	song.soundcloudMetadata = metadata;
 	song.downloading = false;
 	song.downloaded = true;
 }

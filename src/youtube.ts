@@ -8,6 +8,7 @@ import path from "path";
 import { Readable } from "node:stream";
 import Queuer from "./queuer";
 import { Song } from "./song";
+import { setTimeout } from "timers/promises";
 
 const MAX_CONTENT_LENGTH = 1024 * 1024 * 16;
 const DOWNLOAD_PATH = "downloaded";
@@ -70,12 +71,18 @@ class Logger {
  */
 export async function download(url: string, parentFolder: string = "") {
 	console.log("getting info for: " + url);
-	const info = await ytdl.getInfo(url);
+	const info = await ytdl.getInfo(url).catch(() => null);
+	if (info == null) {
+		console.log("Could not download: " + url);
+		return;
+	}
 
 	const format = ytdl.chooseFormat(info.formats, {
 		quality: OPTIONS.quality,
 		filter: (f) => f.hasAudio && !f.hasVideo,
 	});
+
+	console.log("audio bitrate: " + format.audioBitrate);
 
 	const parentPath = path.join(process.cwd(), "downloaded", parentFolder);
 	const fileName = truncateName(info.videoDetails.title).replace(
@@ -106,22 +113,48 @@ export async function download(url: string, parentFolder: string = "") {
 		return downloadPath;
 	}
 
-	downloaded = ytdl.downloadFromInfo(info, options);
+	try {
+		downloaded = ytdl.downloadFromInfo(info, options);
+	} catch (e) {
+		console.log("Could not download: " + url);
+		console.log(e);
+		return;
+	}
+
+	let cancelled = false;
 	await new Promise<void>(async (resolve, _reject) => {
 		Logger.log("starting download of: " + info.videoDetails.title);
 		downloaded.on("info", (_info, _format) => {
 			Logger.log("got information for " + info.videoDetails.title);
 		});
 
-		downloaded.on("data", (data) => fs.writeSync(stream, data));
+		let lastUpdate = 0;
+		downloaded.on("data", (data) => {
+			fs.writeSync(stream, data);
 
+			lastUpdate = Date.now();
+			const currentUpdate = lastUpdate;
+			setTimeout(10000, () => {
+				if (currentUpdate == lastUpdate) {
+					console.log(
+						"Download yielded for 10 seconds! Cancelling download."
+					);
+					cancelled = true;
+					resolve();
+				}
+			});
+		});
+
+		let lastAnnounce = 0;
 		downloaded.on("progress", (_len, cur, tot) => {
+			if (Date.now() < lastAnnounce + 5000) return;
 			const per = (cur / tot) * 100;
-			updateConsole(
+			console.log(
 				`Download of ${info.videoDetails.title}: ${
 					per + "%"
 				} (${parseMB(cur)}MB / ${parseMB(tot)}MB)`
 			);
+			lastAnnounce = Date.now();
 		});
 
 		downloaded.on("end", () => {
@@ -130,6 +163,8 @@ export async function download(url: string, parentFolder: string = "") {
 		});
 	});
 
+	if (cancelled) return null;
+
 	return downloadPath;
 }
 
@@ -137,6 +172,7 @@ export async function work(song: Song) {
 	song.downloading = true;
 	const p = await download(song.url, song.parentFolder);
 	song.downloading = false;
+	if (p == null) return;
 	song.downloaded = true;
 	song.downloadPath = p;
 	song.finalFilePath = path.join(
