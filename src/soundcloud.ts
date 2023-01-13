@@ -6,7 +6,7 @@ import { Song } from "./song";
 import Queuer from "./queuer";
 import "dotenv/config";
 
-export class TrackMetadata {
+export class SoundcloudTrackMetadata {
 	username: string;
 	title: string;
 }
@@ -47,8 +47,11 @@ async function fetchClientID() {
  *
  * @param url The URL that links to the Soundcloud track
  */
-export async function download(url: string): Promise<TrackMetadata> {
+export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
+	const url: string = song.url;
+
 	if (!url) {
+		song.failed = true;
 		console.error("No URL provided!");
 		return;
 	}
@@ -56,6 +59,7 @@ export async function download(url: string): Promise<TrackMetadata> {
 	// Getting the client ID in order to send requests to Soundcloud
 	const clientID = process.env.SOUNDCLOUD_ID || (await fetchClientID());
 	if (clientID == null) {
+		song.failed = true;
 		console.log("Could not fetch client ID!");
 		return;
 	}
@@ -68,6 +72,7 @@ export async function download(url: string): Promise<TrackMetadata> {
 		.catch((err) => console.error(err));
 
 	if (!info) {
+		song.failed = true;
 		console.log("Could not get track information!");
 		return;
 	}
@@ -75,6 +80,7 @@ export async function download(url: string): Promise<TrackMetadata> {
 	// Track authorization in order to download the track
 	const track_authorization = info["track_authorization"];
 	if (!track_authorization) {
+		song.failed = true;
 		console.log("Could not get the track authorization!");
 		return;
 	}
@@ -83,6 +89,7 @@ export async function download(url: string): Promise<TrackMetadata> {
 	const formats = info["media"]["transcodings"]; // array
 
 	if (formats.length <= 0) {
+		song.failed = true;
 		console.log("Could not get the media types from the track!");
 		return;
 	}
@@ -97,9 +104,11 @@ export async function download(url: string): Promise<TrackMetadata> {
 	const username = info["user"]["username"];
 	const title = info["title"];
 
-	const metadata = new TrackMetadata();
+	const metadata = new SoundcloudTrackMetadata();
 	metadata.username = username;
 	metadata.title = title;
+
+	song.soundcloudMetadata = metadata;
 
 	// The final file path where the data will be written
 	let finalPath = path.join(
@@ -150,11 +159,13 @@ export async function download(url: string): Promise<TrackMetadata> {
 
 	// Do not download if it is already downloaded
 	if (length > 0 && bytesAlreadyWritten >= length) {
+		song.downloaded = true;
 		console.log("The file is completely downloaded!");
 		return;
 	}
 
-	return new Promise<TrackMetadata>((resolve, _reject) => {
+	song.downloading = true;
+	return new Promise<SoundcloudTrackMetadata>((resolve, _reject) => {
 		// Writing the data
 		let writtenBytes = 0;
 		stream.on("data", (data) => {
@@ -169,6 +180,8 @@ export async function download(url: string): Promise<TrackMetadata> {
 
 		// Finished downloading
 		stream.on("end", () => {
+			song.downloading = false;
+			song.downloaded = true;
 			console.log("finished downloading the file: " + finalPath);
 			resolve(metadata);
 		});
@@ -176,11 +189,7 @@ export async function download(url: string): Promise<TrackMetadata> {
 }
 
 export async function work(song: Song) {
-	song.downloading = true;
-	const metadata = await download(song.url);
-	song.soundcloudMetadata = metadata;
-	song.downloading = false;
-	song.downloaded = true;
+	await download(song);
 }
 
 export default { work, queuer: new Queuer(work, "soundcloud") };

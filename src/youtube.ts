@@ -12,8 +12,7 @@ import { setTimeout } from "timers/promises";
 
 const MAX_CONTENT_LENGTH = 1024 * 1024 * 16;
 const DOWNLOAD_PATH = "downloaded";
-
-let downloading = false;
+const DOWNLOADS_FOLDER = path.join(process.cwd(), DOWNLOAD_PATH);
 
 const OPTIONS: downloadOptions = {
 	quality: "highestaudio",
@@ -25,12 +24,6 @@ const OPTIONS: downloadOptions = {
 		},
 	},
 };
-
-async function downloadFromInfo(
-	info: videoInfo,
-	format: videoFormat,
-	path: string
-) {}
 
 function updateConsole(message?: string) {
 	/*
@@ -69,13 +62,20 @@ class Logger {
  * @param url The URL that links to the YouTube video
  * @returns The downloaded file's path
  */
-export async function download(url: string, parentFolder: string = "") {
+export async function download(song: Song) {
+	const url: string = song.url;
+	const parentFolder: string = song.parentFolder || "";
+
+	song.download_tries++;
+
 	console.log("getting info for: " + url);
-	const info = await ytdl.getInfo(url).catch(() => null);
+	const info: videoInfo = await ytdl.getInfo(url).catch(() => null);
 	if (info == null) {
-		console.log("Could not download: " + url);
+		song.failed = true;
+		console.log("Could not get info: " + url);
 		return;
 	}
+	song.youtubeMetadata = info.videoDetails;
 
 	const format = ytdl.chooseFormat(info.formats, {
 		quality: OPTIONS.quality,
@@ -84,8 +84,8 @@ export async function download(url: string, parentFolder: string = "") {
 
 	console.log("audio bitrate: " + format.audioBitrate);
 
-	const parentPath = path.join(process.cwd(), "downloaded", parentFolder);
-	const fileName = truncateName(info.videoDetails.title).replace(
+	const parentPath = path.join(DOWNLOADS_FOLDER, parentFolder);
+	const fileName = truncateName(song.getDisplay()).replace(
 		/[/\\?%*:|"<>]/g,
 		"-"
 	);
@@ -98,6 +98,12 @@ export async function download(url: string, parentFolder: string = "") {
 	Logger.log("bytes written: " + bytesWritten.length);
 	Logger.log("content length: " + format.contentLength);
 
+	song.downloadPath = downloadPath;
+	song.finalFilePath = path.join(
+		path.dirname(path.dirname(downloadPath)),
+		path.basename(downloadPath, ".ogg") + ".mp3"
+	);
+
 	let options: downloadOptions = {
 		...OPTIONS,
 		range: {
@@ -106,21 +112,23 @@ export async function download(url: string, parentFolder: string = "") {
 		},
 	};
 
-	let downloaded: Readable = null;
-
 	if (bytesWritten.length >= parseInt(format.contentLength)) {
+		song.downloaded = true;
 		Logger.log("file is fully downloaded.");
-		return downloadPath;
+		return;
 	}
 
+	let downloaded: Readable = null;
 	try {
 		downloaded = ytdl.downloadFromInfo(info, options);
 	} catch (e) {
+		song.failed = true;
 		console.log("Could not download: " + url);
 		console.log(e);
 		return;
 	}
 
+	song.downloading = true;
 	let cancelled = false;
 	await new Promise<void>(async (resolve, _reject) => {
 		Logger.log("starting download of: " + info.videoDetails.title);
@@ -163,22 +171,17 @@ export async function download(url: string, parentFolder: string = "") {
 		});
 	});
 
-	if (cancelled) return null;
+	song.downloading = false;
+	if (cancelled) {
+		song.failed = true;
+		return;
+	}
 
-	return downloadPath;
+	song.downloaded = true;
 }
 
 export async function work(song: Song) {
-	song.downloading = true;
-	const p = await download(song.url, song.parentFolder);
-	song.downloading = false;
-	if (p == null) return;
-	song.downloaded = true;
-	song.downloadPath = p;
-	song.finalFilePath = path.join(
-		path.dirname(path.dirname(p)),
-		path.basename(p, ".ogg") + ".mp3"
-	);
+	await download(song);
 }
 
 export default { work, queuer: new Queuer(work, "youtube") };

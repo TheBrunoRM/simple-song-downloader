@@ -1,6 +1,5 @@
-import { VideoDetails } from "ytdl-core";
-import { TrackMetadata } from "./soundcloud.js";
-import youtube from "./youtube";
+import { MoreVideoDetails, VideoDetails, videoInfo } from "ytdl-core";
+import { SoundcloudTrackMetadata } from "./soundcloud.js";
 
 export enum SongProvider {
 	YouTube,
@@ -15,31 +14,42 @@ export class Song {
 	downloadPath: string = "";
 	finalFilePath: string = "";
 
+	// this is only used in the dowloader for now
+	working: boolean = false;
+
 	fresh: boolean = true;
+
+	failed: boolean = false;
 
 	downloading: boolean = false;
 	downloaded: boolean = false;
+	download_tries: number = 0;
 
 	processing: boolean = false;
 	processed: boolean = false;
+	process_tries: number = 0;
 
-	youtubeMetadata: VideoDetails;
-	soundcloudMetadata: TrackMetadata;
-
-	download_retries: number = 0;
+	youtubeMetadata: MoreVideoDetails;
+	soundcloudMetadata: SoundcloudTrackMetadata;
 
 	getDisplay() {
 		if (this.youtubeMetadata) {
-			return (
-				this.youtubeMetadata.author + " - " + this.youtubeMetadata.title
-			);
-		} else if (this.soundcloudMetadata) {
+			let authorname =
+				this.youtubeMetadata.author?.name ||
+				(this.youtubeMetadata as unknown as VideoDetails).author;
+			if (authorname.endsWith(" - Topic"))
+				authorname = authorname.split(" - Topic")[0];
+			return authorname + " - " + this.youtubeMetadata.title;
+		}
+
+		if (this.soundcloudMetadata)
 			return (
 				this.soundcloudMetadata.username +
 				" - " +
 				this.soundcloudMetadata.title
 			);
-		} else return this.url;
+
+		return this.url;
 	}
 
 	constructor(_url: string, _provider: SongProvider, _parentFolder?: string) {
