@@ -54,6 +54,11 @@ export async function processSong(song: Song) {
 				console.log("Processing finished!");
 				resolve();
 			})
+			.on("error", (err) => {
+				song.failed = true;
+				console.log("Could not process song: " + song.getDisplay());
+				console.log(err);
+			})
 			.save(finalFilePath);
 	});
 }

@@ -1,4 +1,5 @@
 import downloader from "./downloader";
+import fs from "fs";
 
 function main() {
 	console.log("Type the link to the song you want to download:");
@@ -27,6 +28,13 @@ function main() {
 		}
 		downloader.add(url);
 	});
+
+	// add all songs from queue file
+	if (fs.existsSync("queue_list.txt")) {
+		const lines = fs.readFileSync("queue_list.txt").toString().split("\n");
+		for (const line of lines) downloader.add(line);
+		console.log(`Queued ${lines.length} songs from the queue file.`);
+	}
 }
 
 main();
