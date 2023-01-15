@@ -114,8 +114,7 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 	let finalPath = path.join(
 		process.cwd(),
 		"downloaded-soundcloud",
-		// add a timestamp for absolutely no reason
-		`[${Date.now().toString()}] ${username} - ${title}` + ".mp3"
+		`${username} - ${title}` + ".mp3"
 	);
 
 	// create folders

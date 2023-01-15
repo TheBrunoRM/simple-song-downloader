@@ -84,13 +84,17 @@ export async function download(song: Song) {
 
 	console.log("audio bitrate: " + format.audioBitrate);
 
-	const parentPath = path.join(DOWNLOADS_FOLDER, parentFolder);
 	const fileName = truncateName(song.getDisplay()).replace(
 		/[/\\?%*:|"<>]/g,
 		"-"
 	);
 
-	const downloadPath = path.join(parentPath, "ogg", fileName + ".ogg");
+	const downloadPath = path.join(
+		DOWNLOADS_FOLDER,
+		"ogg",
+		parentFolder,
+		fileName + ".ogg"
+	);
 	Logger.log("download path: " + downloadPath);
 	await fs.mkdirSync(path.dirname(downloadPath), { recursive: true });
 	const stream = fs.openSync(downloadPath, "a");
@@ -98,11 +102,21 @@ export async function download(song: Song) {
 	Logger.log("bytes written: " + bytesWritten.length);
 	Logger.log("content length: " + format.contentLength);
 
-	song.downloadPath = downloadPath;
-	song.finalFilePath = path.join(
-		path.dirname(path.dirname(downloadPath)),
-		path.basename(downloadPath, ".ogg") + ".mp3"
+	const finalFilePath = path.join(
+		DOWNLOADS_FOLDER,
+		parentFolder,
+		fileName + ".mp3"
 	);
+
+	song.downloadPath = downloadPath;
+	song.finalFilePath = finalFilePath;
+
+	if (fs.existsSync(finalFilePath)) {
+		song.downloaded = true;
+		song.processed = true;
+		Logger.log("the final file already exists, not downloading.");
+		return;
+	}
 
 	let options: downloadOptions = {
 		...OPTIONS,
@@ -137,12 +151,11 @@ export async function download(song: Song) {
 		});
 
 		let lastUpdate = 0;
-		downloaded.on("data", (data) => {
-			fs.writeSync(stream, data);
-
+		const timeout = () => {
 			lastUpdate = Date.now();
 			const currentUpdate = lastUpdate;
 			setTimeout(10000, () => {
+				if (!song.downloading) return;
 				if (currentUpdate == lastUpdate) {
 					console.log(
 						"Download yielded for 10 seconds! Cancelling download."
@@ -151,6 +164,13 @@ export async function download(song: Song) {
 					resolve();
 				}
 			});
+		};
+
+		timeout();
+
+		downloaded.on("data", (data) => {
+			fs.writeSync(stream, data);
+			timeout();
 		});
 
 		let lastAnnounce = 0;

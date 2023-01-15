@@ -62,7 +62,20 @@ async function add(_url: string, _parentFolder?: string) {
 const SONG_DISPLAY_FORMAT_IN_SONG_LIST_FILE = (song) =>
 	`${song.url} - ${song.getDisplay()}`;
 
+function UpdateListFile() {
+	if (!fs.existsSync("queue_list.txt"))
+		fs.writeFileSync("queue_list.txt", "");
+	fs.truncateSync("queue_list.txt", 0);
+	fs.appendFileSync(
+		"queue_list.txt",
+		queue.map((song) => song.url).join("\n")
+	);
+}
+
 function processQueue() {
+	if (!fs.existsSync("queue_list.txt"))
+		fs.writeFileSync("queue_list.txt", "");
+	const listfile = fs.readFileSync("queue_list.txt").toString().split("\n");
 	const filtered = queue.filter(
 		(song) => !song.downloading && !song.processing
 	);
@@ -73,11 +86,15 @@ function processQueue() {
 	// so we modify the original queue
 	// instead of the copy
 	for (const song of [...queue]) {
+		if (!listfile.includes(song.url))
+			fs.appendFileSync("queue_list.txt", "\n" + song.url);
 		//console.log("song in queue: ", song);
 		if (song.download_tries > 5) {
 			console.warn(
 				"Could not download song after 5 tries, removing from queue and adding to the failed list."
 			);
+			if (!fs.existsSync("failed_list.txt"))
+				fs.writeFileSync("failed_list.txt", "");
 			fs.appendFileSync(
 				"failed_list.txt",
 				"\n" + SONG_DISPLAY_FORMAT_IN_SONG_LIST_FILE(song)
@@ -101,13 +118,21 @@ function processQueue() {
 		if (song.downloaded) {
 			if (song.processed || song.provider == SongProvider.Soundcloud) {
 				if (song.processed)
-					console.log("Finished processing song: " + song.url);
+					console.log(
+						"Finished processing song: " + song.getDisplay()
+					);
 				// remove song from queue
 				queue.splice(queue.indexOf(song), 1);
 				continue;
 			}
 			if (song.process_tries >= 3) {
 				console.error("Could not process song", song);
+				if (!fs.existsSync("failed_list.txt"))
+					fs.writeFileSync("failed_list.txt", "");
+				fs.appendFileSync(
+					"failed_list.txt",
+					"\n" + SONG_DISPLAY_FORMAT_IN_SONG_LIST_FILE(song)
+				);
 				queue.splice(queue.indexOf(song), 1);
 				continue;
 			}
@@ -144,6 +169,7 @@ function processQueue() {
 			continue;
 		}
 	}
+	UpdateListFile();
 	if (queue.length <= 0)
 		console.log("The queue is empty.\nWaiting for input...");
 }

@@ -8,14 +8,10 @@ function main() {
 		const text = data.toString()?.trim();
 		if (!text) return;
 		if (text == "queue") {
+			downloader.getQueue().forEach((song) => console.log(song.url));
 			console.log(
 				"Current queue: " + downloader.getQueue().length + " songs"
 			);
-			downloader
-				.getQueue()
-				.forEach((song, i) =>
-					console.log(i + ": " + song.getDisplay())
-				);
 			return;
 		} else if (text == "force") {
 			console.log("Forcing to process queue!");
