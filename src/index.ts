@@ -32,8 +32,14 @@ function main() {
 	// add all songs from queue file
 	if (fs.existsSync("queue_list.txt")) {
 		const lines = fs.readFileSync("queue_list.txt").toString().split("\n");
-		for (const line of lines) downloader.add(line);
-		console.log(`Queued ${lines.length} songs from the queue file.`);
+		let queued = 0;
+		for (const line of lines) {
+			if (!line) continue;
+			downloader.add(line);
+			queued++;
+		}
+		if (queued > 0)
+			console.log(`Queued ${queued} songs from the queue file.`);
 	}
 }
 
