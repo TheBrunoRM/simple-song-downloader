@@ -69,7 +69,11 @@ export async function download(song: Song) {
 	song.download_tries++;
 
 	console.log("getting info for: " + url);
-	const info: videoInfo = await ytdl.getInfo(url).catch(() => null);
+	const info: videoInfo = await ytdl.getInfo(url).catch((e) => {
+		console.warn(`Error getting info for ${url}`);
+		console.error(e);
+		return null;
+	});
 	if (info == null) {
 		song.failed = true;
 		console.log("Could not get info: " + url);
