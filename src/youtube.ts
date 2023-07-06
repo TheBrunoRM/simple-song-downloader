@@ -20,7 +20,7 @@ const OPTIONS: downloadOptions = {
 	highWaterMark: MAX_CONTENT_LENGTH,
 	requestOptions: {
 		headers: {
-			Cookie: process.env.COOKIE,
+			Cookie: process.env.COOKIE || "",
 		},
 	},
 };
