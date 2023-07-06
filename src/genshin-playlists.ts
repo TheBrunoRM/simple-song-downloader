@@ -1,12 +1,10 @@
 import ytpl from "ytpl";
 import downloader from "./downloader";
-import { Song, SongProvider } from "./song";
-import youtube from "./youtube";
 
 const genshin_playlists = [
-	//"PLqWr7dyJNgLKAYaH8YO0QHPSX-G8tO5lF", // The Wind and the Star Traveler (has each song separate and a large video with all of them)
-	//"PLqWr7dyJNgLL3ylo0tC_ZpuPqyWoumJQ9", // (Mondstadt) City of Winds and Idylls (already downloaded)
-	// "PLqWr7dyJNgLJyzgpXNBQ7LIkQr_I0ULbb", // (Liyue) Jade Moon Upon a Sea of Clouds (already downloaded)
+	"PLqWr7dyJNgLKAYaH8YO0QHPSX-G8tO5lF", // The Wind and the Star Traveler (has each song separate and a large video with all of them)
+	"PLqWr7dyJNgLL3ylo0tC_ZpuPqyWoumJQ9", // (Mondstadt) City of Winds and Idylls
+	"PLqWr7dyJNgLJyzgpXNBQ7LIkQr_I0ULbb", // (Liyue) Jade Moon Upon a Sea of Clouds
 	"PLqWr7dyJNgLKjMUfZ7mnuPFLxX813sm8K", // The Shimmering Voyage
 	"PLqWr7dyJNgLK45KSPhhti4FcWLhEWlegt", // (Inazuma) Realm of Tranquil Eternity
 	"PLqWr7dyJNgLIzKn6cuGEjCvskeA1r6RDH", // (Inazuma) Islands of the Lost and Forgotten
