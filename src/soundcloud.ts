@@ -11,6 +11,8 @@ export class SoundcloudTrackMetadata {
 	title: string;
 }
 
+let cachedClientID = process.env.SOUNDCLOUD_CLIENT_ID;
+
 /**
  * This method fetches the client ID by sending a request to the Soundclod webpage
  * and then gets the client ID by fetching the scripts and searching for it on the files.
@@ -27,7 +29,10 @@ async function fetchClientID() {
 
 	let final_client_id = null;
 	for (const script_url of script_urls) {
-		const script_res = await fetch(script_url).then((r) => r.text());
+		const script_res = await fetch(script_url)
+			.then((r) => r.text())
+			.catch(console.error);
+		if (!script_res) continue;
 		const client_id = script_res.split(`,client_id:"`)[1]?.split(`"`)[0];
 		if (client_id) {
 			final_client_id = client_id;
@@ -36,6 +41,58 @@ async function fetchClientID() {
 	}
 
 	return final_client_id;
+}
+
+const cached_clientid_filename = "soundcloud_clientid";
+
+async function getClientID(): Promise<string> {
+	if (!cachedClientID) {
+		if (fs.existsSync(cached_clientid_filename)) {
+			//console.log("Reading SoundCloud client ID from file");
+			cachedClientID = fs
+				.readFileSync(cached_clientid_filename)
+				.toString();
+		} else {
+			cachedClientID = await fetchClientID();
+			//fs.truncateSync(cached_clientid_filename, 0);
+			fs.writeFileSync(cached_clientid_filename, cachedClientID);
+			//console.log("Saved SoundCloud client ID to file");
+		}
+	}
+	return cachedClientID;
+}
+
+export async function searchTracks(query: string, limit: number = 5) {
+	const clientID = await getClientID();
+
+	if (clientID == null) {
+		console.log("Could not get SoundCloud client ID!");
+		return;
+	}
+
+	const data = await fetch(
+		`https://api-v2.soundcloud.com/search/tracks?q=${encodeURIComponent(
+			query
+		)}&client_id=${clientID}&limit=${limit}&app_locale=en`
+	);
+	if (!data.ok) {
+		console.error("Could not fetch SoundCloud tracks for search: " + query);
+		console.error(data.status + ": " + data.statusText);
+		if (data.status == 401) {
+			cachedClientID = null;
+			console.warn("Deleted client id from cache, as it is invalid.");
+		}
+		return null;
+	}
+
+	const json = await data.json().catch(console.error);
+
+	if (!json)
+		return console.error(
+			"Could not parse json when searching SoundCloud tracks"
+		);
+
+	return json;
 }
 
 /**
@@ -57,19 +114,31 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 	}
 
 	// Getting the client ID in order to send requests to Soundcloud
-	const clientID = process.env.SOUNDCLOUD_ID || (await fetchClientID());
+	const clientID = await getClientID();
 	if (clientID == null) {
 		song.failed = true;
-		console.log("Could not fetch client ID!");
+		console.log("Could not get soundcloud client ID!");
 		return;
 	}
 
 	// Track information
-	const info = await fetch(
+	const data = await fetch(
 		`https://api-v2.soundcloud.com/resolve?url=${url}&client_id=${clientID}`
-	)
-		.then((a) => a.json())
-		.catch((err) => console.error(err));
+	);
+
+	if (!data.ok) {
+		song.failed = true;
+		console.log("Could not get track information!");
+
+		if (data.status == 401) {
+			cachedClientID = null;
+			console.warn("Deleted client id from cache, as it is invalid.");
+		}
+
+		return;
+	}
+
+	const info = await data.json().catch(console.error);
 
 	if (!info) {
 		song.failed = true;
@@ -98,7 +167,7 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 	const progressiveURL = formats.find(
 		(m) => m["format"]["protocol"] == "progressive"
 	)?.url;
-	console.log(progressiveURL);
+	//console.log(progressiveURL);
 
 	// Track metadata
 	const username = info["user"]["username"];
@@ -125,6 +194,17 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 		bytesAlreadyWritten = fs.readFileSync(finalPath).length;
 		if (bytesAlreadyWritten > 0) {
 			console.log("Warning, the file already exists!");
+			let newPath = "";
+			let i = 1;
+			while (true) {
+				newPath = finalPath + "_" + i;
+				if (!fs.existsSync(newPath)) {
+					break;
+				}
+				i++;
+			}
+			console.log("New path: " + newPath);
+			finalPath = newPath;
 		}
 	}
 
@@ -139,12 +219,12 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 
 	// This is the track stream URL
 	const media_url = media_response["url"];
-	console.log("the track stream URL:", media_url);
+	//console.log("the track stream URL:", media_url);
 
 	// Downloading the stream
 	const response = await fetch(media_url);
 	const stream = response.body;
-	console.log("stream:", stream);
+	//console.log("stream:", stream);
 
 	// Get the length of the stream
 	// through the size of the response.
@@ -154,7 +234,7 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 		stream["readableLength"] ||
 		response.size;
 
-	console.log("content length: " + length);
+	//console.log("content length: " + length);
 
 	// Do not download if it is already downloaded
 	if (length > 0 && bytesAlreadyWritten >= length) {
@@ -181,7 +261,7 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 		stream.on("end", () => {
 			song.downloading = false;
 			song.downloaded = true;
-			console.log("finished downloading the file: " + finalPath);
+			//console.log("finished downloading the file: " + finalPath);
 			resolve(metadata);
 		});
 	});

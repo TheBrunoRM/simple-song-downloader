@@ -76,12 +76,18 @@ function processQueue() {
 	if (!fs.existsSync("queue_list.txt"))
 		fs.writeFileSync("queue_list.txt", "");
 	const listfile = fs.readFileSync("queue_list.txt").toString().split("\n");
+
+	// this is verbose
+	// TODO make setting that toggles verbose logs
+	/*
 	const filtered = queue.filter(
 		(song) => !song.downloading && !song.processing
 	);
 	if (filtered.length > 0)
 		console.log(`Updating status of ${filtered.length} songs.`);
-	if (queue.length > 0) console.log(`Songs in queue: ${queue.length}`);
+		if (queue.length > 0) console.log(`Songs in queue: ${queue.length}`);
+		*/
+
 	// here we create a copy of the queue,
 	// so we modify the original queue
 	// instead of the copy
@@ -120,6 +126,10 @@ function processQueue() {
 				if (song.processed)
 					console.log(
 						"Finished processing song: " + song.getDisplay()
+					);
+				else if (song.provider == SongProvider.Soundcloud)
+					console.log(
+						"Finished downloading song: " + song.getDisplay()
 					);
 				// remove song from queue
 				queue.splice(queue.indexOf(song), 1);

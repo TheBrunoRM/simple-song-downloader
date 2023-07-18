@@ -16,7 +16,8 @@
 	"version": "1.0.0",
 	"main": "dist/index.js",
 	"scripts": {
-		"start": "npx tsc && node --experimental-specifier-resolution=node .",
+		"restart": "npx tsc && npm start",
+		"start": "node --experimental-specifier-resolution=node .",
 		"playlist": "npx tsc && node dist/playlist.js",
 		"playlist-test": "npx tsc && node dist/playlist-test.js",
 		"soundcloud": "npx tsc && node dist/soundcloud.js",
