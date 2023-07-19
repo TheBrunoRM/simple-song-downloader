@@ -1,4 +1,24 @@
 {
+	"type": "module",
+	"name": "simple-song-downloader",
+	"description": "simple-song-downloader",
+	"version": "1.0.0",
+	"main": "dist/index.js",
+	"scripts": {
+		"tsc": "npx tsc",
+		"restart": "npm run tsc && npm start",
+		"start": "node --experimental-specifier-resolution=node ."
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/TheBrunoRM/simple-song-downloader.git"
+	},
+	"author": "TheBrunoRM",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/TheBrunoRM/simple-song-downloader/issues"
+	},
+	"homepage": "https://github.com/TheBrunoRM/simple-song-downloader#readme",
 	"dependencies": {
 		"dotenv": "^16.0.3",
 		"fluent-ffmpeg": "^2.1.2",
@@ -10,30 +30,6 @@
 		"ytdl-core": "git+https://github.com/dim4ik1106/node-ytdl-core.git#master",
 		"ytpl": "^2.3.0"
 	},
-	"type": "module",
-	"name": "simple-song-downloader",
-	"description": "simple-song-downloader",
-	"version": "1.0.0",
-	"main": "dist/index.js",
-	"scripts": {
-		"restart": "npx tsc && npm start",
-		"start": "node --experimental-specifier-resolution=node .",
-		"playlist": "npx tsc && node dist/playlist.js",
-		"playlist-test": "npx tsc && node dist/playlist-test.js",
-		"soundcloud": "npx tsc && node dist/soundcloud.js",
-		"soundcloud-test": "npx tsc && node dist/soundcloud-test.js",
-		"test": "echo \"Error: no test specified\" && exit 1"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/TheBrunoRM/simple-song-downloader.git"
-	},
-	"author": "",
-	"license": "ISC",
-	"bugs": {
-		"url": "https://github.com/TheBrunoRM/simple-song-downloader/issues"
-	},
-	"homepage": "https://github.com/TheBrunoRM/simple-song-downloader#readme",
 	"devDependencies": {
 		"@types/fluent-ffmpeg": "^2.1.20",
 		"@types/luxon": "^3.2.0",

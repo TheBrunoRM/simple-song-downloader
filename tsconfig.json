@@ -1,34 +1,30 @@
 {
-  "compilerOptions": {
-      "experimentalDecorators": true,
-      "target": "esnext",
-      "module": "esnext",
-      "outDir": "./dist",
-      "rootDir": "./src",
-      "removeComments": true,
-      "esModuleInterop": true,
-      "resolveJsonModule": true,
-      "moduleResolution": "Node",
-      "skipLibCheck": true,
-      "forceConsistentCasingInFileNames": false,
-      "noUnusedLocals": false,
-      "noUnusedParameters": false,
-      "useUnknownInCatchVariables": false,
-      "noFallthroughCasesInSwitch": true,
-      "strict": false,
-      "alwaysStrict": false,
-      "noImplicitAny": false,
-      "noImplicitThis": false,
-      "strictBindCallApply": true,
-      "strictNullChecks": false,
-      "strictFunctionTypes": true,
-      "strictPropertyInitialization": false,
-      "emitDecoratorMetadata": true,
-  },
-  "include": [
-      "src"
-  ],
-  "exclude": [
-      "node_modules"
-  ]
+	"compilerOptions": {
+		"experimentalDecorators": true,
+		"target": "esnext",
+		"module": "esnext",
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"removeComments": true,
+		"esModuleInterop": true,
+		"resolveJsonModule": true,
+		"moduleResolution": "Node",
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": false,
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"useUnknownInCatchVariables": false,
+		"noFallthroughCasesInSwitch": true,
+		"strict": false,
+		"alwaysStrict": false,
+		"noImplicitAny": false,
+		"noImplicitThis": false,
+		"strictBindCallApply": true,
+		"strictNullChecks": false,
+		"strictFunctionTypes": true,
+		"strictPropertyInitialization": false,
+		"emitDecoratorMetadata": true
+	},
+	"include": ["src"],
+	"exclude": ["node_modules"]
 }

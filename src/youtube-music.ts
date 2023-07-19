@@ -73,7 +73,6 @@ async function search(query: string) {
 						platform: "DESKTOP",
 						clientFormFactor: "UNKNOWN_FORM_FACTOR",
 						userInterfaceTheme: "USER_INTERFACE_THEME_DARK",
-						timeZone: "America/Buenos_Aires",
 						browserName: "Chrome",
 						browserVersion: "114.0.0.0",
 						acceptHeader:
@@ -138,4 +137,6 @@ async function search(query: string) {
 
 export default {
 	search,
+	getKey,
+	getCookie,
 };
