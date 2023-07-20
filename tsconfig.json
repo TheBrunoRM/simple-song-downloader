@@ -1,8 +1,8 @@
 {
 	"compilerOptions": {
 		"experimentalDecorators": true,
-		"target": "esnext",
-		"module": "esnext",
+		"target": "ES6",
+		"module": "CommonJS",
 		"outDir": "./dist",
 		"rootDir": "./src",
 		"removeComments": true,
@@ -23,7 +23,8 @@
 		"strictNullChecks": false,
 		"strictFunctionTypes": true,
 		"strictPropertyInitialization": false,
-		"emitDecoratorMetadata": true
+		"emitDecoratorMetadata": true,
+		"sourceMap": true
 	},
 	"include": ["src"],
 	"exclude": ["node_modules"]

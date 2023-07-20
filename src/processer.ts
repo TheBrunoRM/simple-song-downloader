@@ -3,6 +3,8 @@ import Queuer from "./queuer";
 import { Song } from "./song";
 import fs from "fs";
 
+let ffmpegNotFound = false;
+
 /**
  *
  * @param downloadPath the path where the .ogg got downloaded
@@ -41,6 +43,7 @@ export async function processSong(song: Song) {
 		"processing with ffmpeg: " + downloadPath + " to " + finalFilePath
 	);
 	song.processing = true;
+
 	return new Promise<void>((resolve, _reject) => {
 		ffmpeg(downloadPath)
 			.format("mp3")
@@ -55,6 +58,10 @@ export async function processSong(song: Song) {
 				resolve();
 			})
 			.on("error", (err) => {
+				if (err.message.includes("Cannot find ffmpeg")) {
+					ffmpegNotFound = true;
+					return resolve(null);
+				}
 				song.failed = true;
 				console.log("Could not process song: " + song.getDisplay());
 				console.log(err);

@@ -4,6 +4,7 @@ import fs from "fs";
 import youtubeMusic from "./youtube-music";
 import readline, { Key } from "readline";
 import fetch from "node-fetch";
+import "source-map-support/register";
 
 let searchedTracks = null;
 let selectingProvider = false;
@@ -12,6 +13,7 @@ let searchedText = null;
 
 async function main() {
 	console.clear();
+	process.title = "Simple Song Downloader";
 	console.log("Type the name of the song you want to download:");
 	readline.emitKeypressEvents(process.stdin);
 
@@ -88,13 +90,18 @@ async function main() {
 		}
 
 		if (!url) {
-			searchedText = text;
-			console.log(
-				"Select provider: SoundCloud [s] | YouTube [y] | YouTube Music [m]"
-			);
-			selectingProvider = true;
-			process.stdin.setRawMode(true);
-			return;
+			url = "https://" + new RegExp(/(.+:\/\/)?(.+)/g).exec(text)[2];
+			try {
+				new URL(url);
+			} catch (e) {
+				searchedText = text;
+				console.log(
+					"Select provider: SoundCloud [s] | YouTube [y] | YouTube Music [m]"
+				);
+				selectingProvider = true;
+				process.stdin.setRawMode(true);
+				return;
+			}
 		}
 
 		downloader.add(url);
@@ -104,6 +111,11 @@ async function main() {
 }
 
 main();
+
+process.on("uncaughtException", (e) => {
+	console.log("Uncaught exception!");
+	console.log(e);
+});
 
 function addSongsFromQueueFile() {
 	if (!fs.existsSync("queue_list.txt")) return;
