@@ -107,7 +107,11 @@ async function search(query: string) {
 		}
 	).then((a) => a.json());
 
-	return json.contents.tabbedSearchResultsRenderer.tabs[0].tabRenderer.content.sectionListRenderer.contents
+	const contents =
+		json.contents.tabbedSearchResultsRenderer.tabs[0].tabRenderer.content
+			.sectionListRenderer.contents;
+
+	const songs = contents
 		.find((a) => a.musicShelfRenderer?.title.runs[0].text == "Canciones")
 		.musicShelfRenderer.contents.map((a) => {
 			return {
@@ -133,6 +137,8 @@ async function search(query: string) {
 				)?.text,
 			};
 		});
+
+	return songs;
 }
 
 export default {

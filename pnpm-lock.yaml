@@ -8,6 +8,7 @@ specifiers:
   '@types/fluent-ffmpeg': ^2.1.20
   '@types/luxon': ^3.2.0
   '@types/node': ^18.11.18
+  adm-zip: ^0.5.10
   archiver: ^5.3.1
   dotenv: ^16.0.3
   fluent-ffmpeg: ^2.1.2
@@ -22,6 +23,7 @@ specifiers:
 
 dependencies:
   '@ffmpeg-installer/ffmpeg': 1.1.0
+  adm-zip: 0.5.10
   dotenv: 16.3.1
   fluent-ffmpeg: 2.1.2
   luxon: 3.3.0
@@ -430,6 +432,11 @@ packages:
     dependencies:
       '@types/node': 18.16.19
     dev: true
+
+  /adm-zip/0.5.10:
+    resolution: {integrity: sha512-x0HvcHqVJNTPk/Bw8JbLWlWoo6Wwnsug0fnYYro1HBrjxZ3G7/AZk7Ahv8JwDe1uIcz8eBqvu86FuF1POiG7vQ==}
+    engines: {node: '>=6.0'}
+    dev: false
 
   /agent-base/6.0.2:
     resolution: {integrity: sha512-RZNwNclF7+MS/8bDg70amg32dyeZGZxiDuQmZxKLAlQjr3jGyLx+4Kkk58UO7D2QdgFIQCovuSuZESne6RG6XQ==}

@@ -1,10 +1,26 @@
 // Source: https://github.com/AngaBlue/exe
 
+const archiver = require("archiver");
+const fs = require("fs");
+const path = require("path");
+
 const APP_NAME = "Simple Song Downloader";
 
 async function main() {
 	const exe = require("@angablue/exe");
 	const version = require("../package.json").version;
+
+	if (!fs.existsSync("./bin")) fs.mkdirSync("./bin");
+	if (!fs.existsSync("./bin/build")) fs.mkdirSync("./bin/build");
+
+	for (const file of fs.readdirSync("./bin/build")) {
+		const filePath = path.join("./bin/build", file);
+		try {
+			fs.unlinkSync(filePath);
+		} catch (e) {
+			console.log("Could not unlink: " + filePath);
+		}
+	}
 
 	const build = exe({
 		entry: "./dist/index.js",
@@ -23,11 +39,8 @@ async function main() {
 
 	await build.then(() => console.log("Build completed!"));
 
-	const archiver = require("archiver");
-	const fs = require("fs");
-
 	const sourceDir = "./bin/build";
-	const outPath = `./bin/simple-song-downloader-${version}.zip`;
+	const outPath = `./bin/${require("../package.json").name}-${version}.zip`;
 
 	const archive = archiver("zip", { zlib: { level: 9 } });
 	const stream = fs.createWriteStream(outPath);

@@ -31,6 +31,7 @@
 	"homepage": "https://github.com/TheBrunoRM/simple-song-downloader#readme",
 	"dependencies": {
 		"@ffmpeg-installer/ffmpeg": "^1.1.0",
+		"adm-zip": "^0.5.10",
 		"dotenv": "^16.0.3",
 		"fluent-ffmpeg": "^2.1.2",
 		"luxon": "^3.2.1",

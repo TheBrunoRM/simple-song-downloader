@@ -5,6 +5,7 @@ import path from "path";
 import { Song } from "./song";
 import Queuer from "./queuer";
 import "dotenv/config";
+import { config, log } from "./index";
 
 export class SoundcloudTrackMetadata {
 	username: string;
@@ -48,7 +49,7 @@ const cached_clientid_filename = "soundcloud_clientid";
 async function getClientID(): Promise<string> {
 	if (!cachedClientID) {
 		if (fs.existsSync(cached_clientid_filename)) {
-			//console.log("Reading SoundCloud client ID from file");
+			log("Reading SoundCloud client ID from file");
 			cachedClientID = fs
 				.readFileSync(cached_clientid_filename)
 				.toString();
@@ -56,7 +57,7 @@ async function getClientID(): Promise<string> {
 			cachedClientID = await fetchClientID();
 			//fs.truncateSync(cached_clientid_filename, 0);
 			fs.writeFileSync(cached_clientid_filename, cachedClientID);
-			//console.log("Saved SoundCloud client ID to file");
+			log("Saved SoundCloud client ID to file");
 		}
 	}
 	return cachedClientID;
@@ -167,7 +168,7 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 	const progressiveURL = formats.find(
 		(m) => m["format"]["protocol"] == "progressive"
 	)?.url;
-	//console.log(progressiveURL);
+	log(progressiveURL);
 
 	// Track metadata
 	const username = info["user"]["username"];
@@ -219,12 +220,12 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 
 	// This is the track stream URL
 	const media_url = media_response["url"];
-	//console.log("the track stream URL:", media_url);
+	log("the track stream URL:", media_url);
 
 	// Downloading the stream
 	const response = await fetch(media_url);
 	const stream = response.body;
-	//console.log("stream:", stream);
+	log("stream:", stream);
 
 	// Get the length of the stream
 	// through the size of the response.
@@ -234,7 +235,7 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 		stream["readableLength"] ||
 		response.size;
 
-	//console.log("content length: " + length);
+	log("content length: " + length);
 
 	// Do not download if it is already downloaded
 	if (length > 0 && bytesAlreadyWritten >= length) {
@@ -249,11 +250,11 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 		let writtenBytes = 0;
 		stream.on("data", (data) => {
 			writtenBytes += data;
-			/*
-			if (parseInt(length) > 0)
-				console.log(`progress: ${(writtenBytes / length) * 100}%`);
-			else console.log(`written ${writtenBytes} bytes`);
-			*/
+			if (config.debug) {
+				if (parseInt(length) > 0)
+					log(`progress: ${(writtenBytes / length) * 100}%`);
+				else log(`written ${writtenBytes} bytes`);
+			}
 			fs.writeSync(file, data);
 		});
 
@@ -261,7 +262,7 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 		stream.on("end", () => {
 			song.downloading = false;
 			song.downloaded = true;
-			//console.log("finished downloading the file: " + finalPath);
+			log("finished downloading the file: " + finalPath);
 			resolve(metadata);
 		});
 	});

@@ -9,6 +9,7 @@ import { Readable } from "node:stream";
 import Queuer from "./queuer";
 import { Song } from "./song";
 import { setTimeout } from "timers/promises";
+import { log } from "./index";
 
 const MAX_CONTENT_LENGTH = 1024 * 1024 * 16;
 const DOWNLOAD_PATH = "downloaded";
@@ -47,14 +48,6 @@ function truncateName(str: string, max = 200) {
 	return str.slice(0, max).trim();
 }
 
-const DEBUG_INFO = true;
-
-class Logger {
-	static log(message?: any, ...optionalParams: any[]): void {
-		if (DEBUG_INFO) console.log(message, optionalParams);
-	}
-}
-
 /**
  *
  * This method downloads a song from a YouTube URL
@@ -68,7 +61,7 @@ export async function download(song: Song) {
 
 	song.download_tries++;
 
-	console.log("getting info for: " + url);
+	log("getting info for: " + url);
 	const info: videoInfo = await ytdl.getInfo(url).catch((e) => {
 		console.warn(`Error getting info for ${url}`);
 		console.error(e);
@@ -86,7 +79,7 @@ export async function download(song: Song) {
 		filter: (f) => f.hasAudio && !f.hasVideo,
 	});
 
-	console.log("audio bitrate: " + format.audioBitrate);
+	log("audio bitrate: " + format.audioBitrate);
 
 	const fileName = truncateName(song.getDisplay()).replace(
 		/[/\\?%*:|"<>]/g,
@@ -99,12 +92,12 @@ export async function download(song: Song) {
 		parentFolder,
 		fileName + ".ogg"
 	);
-	Logger.log("download path: " + downloadPath);
+	log("download path: " + downloadPath);
 	await fs.mkdirSync(path.dirname(downloadPath), { recursive: true });
 	const stream = fs.openSync(downloadPath, "a");
 	const bytesWritten = fs.readFileSync(downloadPath);
-	Logger.log("bytes written: " + bytesWritten.length);
-	Logger.log("content length: " + format.contentLength);
+	log("bytes written: " + bytesWritten.length);
+	log("content length: " + format.contentLength);
 
 	const finalFilePath = path.join(
 		DOWNLOADS_FOLDER,
@@ -118,7 +111,7 @@ export async function download(song: Song) {
 	if (fs.existsSync(finalFilePath)) {
 		song.downloaded = true;
 		song.processed = true;
-		Logger.log("the final file already exists, not downloading.");
+		log("the final file already exists, not downloading.");
 		return;
 	}
 
@@ -132,7 +125,7 @@ export async function download(song: Song) {
 
 	if (bytesWritten.length >= parseInt(format.contentLength)) {
 		song.downloaded = true;
-		Logger.log("file is fully downloaded.");
+		log("file is fully downloaded.");
 		return;
 	}
 
@@ -149,9 +142,9 @@ export async function download(song: Song) {
 	song.downloading = true;
 	let cancelled = false;
 	await new Promise<void>(async (resolve, _reject) => {
-		Logger.log("starting download of: " + info.videoDetails.title);
+		log("starting download of: " + info.videoDetails.title);
 		downloaded.on("info", (_info, _format) => {
-			Logger.log("got information for " + info.videoDetails.title);
+			log("got information for " + info.videoDetails.title);
 		});
 
 		let lastUpdate = 0;
@@ -190,7 +183,7 @@ export async function download(song: Song) {
 		});
 
 		downloaded.on("end", () => {
-			Logger.log("finished downloading: " + info.videoDetails.title);
+			log("finished downloading: " + info.videoDetails.title);
 			resolve();
 		});
 	});

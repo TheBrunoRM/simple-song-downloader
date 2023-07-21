@@ -6,26 +6,37 @@ import processer from "./processer";
 import ytpl from "ytpl";
 import path from "path";
 import fs from "fs";
+import { log } from "./index";
 
 const queue: Song[] = [];
 
-async function add(_url: string, _parentFolder?: string) {
-	const url = new URL(_url);
+function parseProvider(_url: string | URL) {
+	let url;
+	if (_url instanceof URL) url = _url;
+	else {
+		try {
+			url = new URL(_url);
+		} catch (e) {
+			console.error("Couldn't parse URL: " + _url);
+			return null;
+		}
+	}
 
-	// TODO check for youtube.com or youtu.be
-
-	let provider;
-	if (url.hostname.endsWith("soundcloud.com"))
-		provider = SongProvider.Soundcloud;
+	if (url.hostname.endsWith("soundcloud.com")) return SongProvider.Soundcloud;
 	else if (
 		url.hostname.endsWith("youtube.com") ||
 		url.hostname.endsWith("youtu.be")
 	) {
-		provider = SongProvider.YouTube;
-	} else {
-		console.error("Unknown song provider: " + url.hostname);
-		return;
+		return SongProvider.YouTube;
 	}
+
+	console.error("Unknown song provider: " + url.hostname);
+	return null;
+}
+
+async function add(_url: string, _parentFolder?: string) {
+	const url = new URL(_url);
+	const provider = parseProvider(url);
 
 	if (
 		provider == SongProvider.YouTube &&
@@ -77,16 +88,12 @@ function processQueue() {
 		fs.writeFileSync("queue_list.txt", "");
 	const listfile = fs.readFileSync("queue_list.txt").toString().split("\n");
 
-	// this is verbose
-	// TODO make setting that toggles verbose logs
-	/*
 	const filtered = queue.filter(
 		(song) => !song.downloading && !song.processing
 	);
 	if (filtered.length > 0)
-		console.log(`Updating status of ${filtered.length} songs.`);
-		if (queue.length > 0) console.log(`Songs in queue: ${queue.length}`);
-		*/
+		log(`Updating status of ${filtered.length} songs.`);
+	if (queue.length > 0) log(`Songs in queue: ${queue.length}`);
 
 	// here we create a copy of the queue,
 	// so we modify the original queue
@@ -94,7 +101,6 @@ function processQueue() {
 	for (const song of [...queue]) {
 		if (!listfile.includes(song.url))
 			fs.appendFileSync("queue_list.txt", "\n" + song.url);
-		//console.log("song in queue: ", song);
 		if (song.download_tries > 5) {
 			console.warn(
 				"Could not download song after 5 tries, removing from queue and adding to the failed list."
@@ -181,7 +187,7 @@ function processQueue() {
 	}
 	UpdateListFile();
 	if (queue.length <= 0)
-		console.log("The queue is empty.\nWaiting for input...");
+		console.log("The queue is empty. Waiting for input...");
 }
 
 const getQueue = () => queue;

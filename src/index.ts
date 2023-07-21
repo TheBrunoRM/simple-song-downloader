@@ -5,19 +5,38 @@ import youtubeMusic from "./youtube-music";
 import readline, { Key } from "readline";
 import fetch from "node-fetch";
 import "source-map-support/register";
+import processer from "./processer";
 
 let searchedTracks = null;
 let selectingProvider = false;
 let selectedProvider = null;
 let searchedText = null;
 
+export const log = (...t) => {
+	if (!config?.debug) return;
+	console.log(...t);
+};
+export let config;
+export const saveConfig = () =>
+	fs.writeFileSync("config.json", Buffer.from(JSON.stringify(config)));
+
 async function main() {
 	console.clear();
 	process.title = "Simple Song Downloader";
+
+	if (!fs.existsSync("config.json")) {
+		fs.writeFileSync("config.json", "{}");
+
+		// this will never log since the config file didn't exist
+		log("Config file created");
+	}
+	config = fs.readFileSync("config.json").toJSON();
+
 	console.log("Type the name of the song you want to download:");
 	readline.emitKeypressEvents(process.stdin);
 
 	process.stdin.on("keypress", (str: String, key: Key) => {
+		//if (!str && !key) return;
 		if (key.name == "c" && key.ctrl) {
 			console.log("CTRL-C called, see you next time!");
 			process.exit();
@@ -34,8 +53,8 @@ async function main() {
 					console.log("Selected YouTube Music");
 					break;
 				default:
-					console.log("Invalid provider");
-					return;
+					console.log("Invalid provider, operation cancelled");
+					break;
 			}
 			selectingProvider = false;
 			selectedProvider = key.name;
@@ -56,7 +75,21 @@ async function main() {
 	});
 
 	process.stdin.addListener("data", async (data) => {
-		const text = data.toString()?.trim();
+		//if (data.compare(Buffer.from("0d0a", "hex")) == 0) return;
+		if (!data) return;
+		let text;
+		try {
+			text = data.toString()?.trim();
+		} catch (e) {
+			console.log("Couldn't parse string!");
+			console.log(e);
+			return;
+		}
+		if (!text) return;
+		if (text == "download_ffmpeg") {
+			processer.downloadFfmpeg();
+			return;
+		}
 		if (selectedProvider) {
 			switch (selectedProvider) {
 				case "s":
@@ -69,7 +102,7 @@ async function main() {
 					searchYouTube(searchedText);
 					break;
 				default:
-					return;
+					break;
 			}
 
 			searchedText = null;
@@ -78,8 +111,12 @@ async function main() {
 		}
 
 		let url = null;
-		let int = parseInt(text);
-		if (!isNaN(int)) {
+		if (searchedTracks) {
+			let int = parseInt(text);
+			if (isNaN(int)) {
+				searchedTracks = null;
+				return console.log("Cancelled operation.");
+			}
 			if (!searchedTracks)
 				return console.log("You need to search tracks first!");
 			const track = searchedTracks[int];
@@ -90,9 +127,9 @@ async function main() {
 		}
 
 		if (!url) {
-			url = "https://" + new RegExp(/(.+:\/\/)?(.+)/g).exec(text)[2];
 			try {
-				new URL(url);
+				new URL(text);
+				url = text;
 			} catch (e) {
 				searchedText = text;
 				console.log(
@@ -153,9 +190,9 @@ async function searchSoundcloud(text: string) {
 	}
 	console.log("-------------------------------");
 	console.log(
-		`Found ${tracks.collection.length} tracks in ${
+		`Found ${tracks.collection.length} tracks in ${Math.round(
 			performance.now() - start
-		}ms`
+		)}ms`
 	);
 	console.log("Type the track number to download it.");
 }
@@ -168,7 +205,9 @@ async function searchYouTubeMusic(text: string) {
 	searchedTracks = results;
 
 	console.log(
-		`Found ${results.length} tracks in ${performance.now() - start}ms`
+		`Found ${results.length} tracks in ${Math.round(
+			performance.now() - start
+		)}ms`
 	);
 	console.log("Type the track number to download it.");
 
@@ -187,7 +226,9 @@ async function searchYouTube(text: string) {
 	searchedTracks = results;
 
 	console.log(
-		`Found ${results.length} tracks in ${performance.now() - start}ms`
+		`Found ${results.length} tracks in ${Math.round(
+			performance.now() - start
+		)}ms`
 	);
 	console.log("Type the track number to download it.");
 
