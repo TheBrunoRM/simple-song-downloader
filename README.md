@@ -1,15 +1,15 @@
 # simple-song-downloader v1.0.0
 
-## Download YouTube videos, YouTube Music songs, playlists, and Soundcloud tracks.
+## Download YouTube videos, YouTube Music songs, playlists, and SoundCloud tracks.
 
-Just type the name of the song you want, select the provider (YouTube, YouTube Music or Soundcloud) and the app will do the rest!
+Just type the name of the song you want, select the provider (YouTube, YouTube Music or SoundCloud) and the app will do the rest!
 
 ## How it works
 
 The app will fetch the platforms to get the cookies and the user client id or token, and will use this data to download the songs.\
 If the downloaded file is a YouTube video or playlist, it will convert the downloaded ogg (opus) files to mp3 using Ffmpeg.\
 The app *should* download and extract FFmpeg automatically in case it is not added to the PATH.\
-Soundcloud provides files in mp3 format, so a conversion is not needed in that case.
+SoundCloud provides files in mp3 format, so a conversion is not needed in that case.
 
 ## How to build it yourself
 

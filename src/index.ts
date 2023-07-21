@@ -93,7 +93,7 @@ async function main() {
 		if (selectedProvider) {
 			switch (selectedProvider) {
 				case "s":
-					searchSoundcloud(searchedText);
+					searchSoundCloud(searchedText);
 					break;
 				case "m":
 					searchYouTubeMusic(searchedText);
@@ -167,7 +167,7 @@ function addSongsFromQueueFile() {
 	if (queued > 0) console.log(`Queued ${queued} songs from the queue file.`);
 }
 
-async function searchSoundcloud(text: string) {
+async function searchSoundCloud(text: string) {
 	// search soundcloud
 	console.log("Searching SoundCloud tracks: " + text);
 	const start = performance.now();
@@ -198,7 +198,7 @@ async function searchSoundcloud(text: string) {
 }
 
 async function searchYouTubeMusic(text: string) {
-	console.log("Searching Youtube Music songs: " + text);
+	console.log("Searching YouTube Music songs: " + text);
 	const start = performance.now();
 
 	const results = await youtubeMusic.search(text);
@@ -219,7 +219,7 @@ async function searchYouTubeMusic(text: string) {
 }
 
 async function searchYouTube(text: string) {
-	console.log("Searching Youtube songs: " + text);
+	console.log("Searching YouTube songs: " + text);
 	const start = performance.now();
 
 	const results = await searchYouTube2(text);

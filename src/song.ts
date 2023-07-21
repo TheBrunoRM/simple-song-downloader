@@ -1,9 +1,9 @@
 import { MoreVideoDetails, VideoDetails, videoInfo } from "ytdl-core";
-import { SoundcloudTrackMetadata } from "./soundcloud.js";
+import { SoundCloudTrackMetadata } from "./soundcloud.js";
 
 export enum SongProvider {
 	YouTube,
-	Soundcloud,
+	SoundCloud,
 }
 
 export class Song {
@@ -30,7 +30,7 @@ export class Song {
 	process_tries: number = 0;
 
 	youtubeMetadata: MoreVideoDetails;
-	soundcloudMetadata: SoundcloudTrackMetadata;
+	soundcloudMetadata: SoundCloudTrackMetadata;
 
 	getDisplay() {
 		if (this.youtubeMetadata) {

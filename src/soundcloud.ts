@@ -7,7 +7,7 @@ import Queuer from "./queuer";
 import "dotenv/config";
 import { config, log } from "./index";
 
-export class SoundcloudTrackMetadata {
+export class SoundCloudTrackMetadata {
 	username: string;
 	title: string;
 }
@@ -98,14 +98,14 @@ export async function searchTracks(query: string, limit: number = 5) {
 
 /**
  * This methods searches for a song with the specified URL
- * and downloads it in the downloads folder for Soundcloud.
+ * and downloads it in the downloads folder for SoundCloud.
  *
  * This does not need any processing
  * since it downloads the audio in the mp3 format.
  *
- * @param url The URL that links to the Soundcloud track
+ * @param url The URL that links to the SoundCloud track
  */
-export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
+export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 	const url: string = song.url;
 
 	if (!url) {
@@ -114,7 +114,7 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 		return;
 	}
 
-	// Getting the client ID in order to send requests to Soundcloud
+	// Getting the client ID in order to send requests to SoundCloud
 	const clientID = await getClientID();
 	if (clientID == null) {
 		song.failed = true;
@@ -174,7 +174,7 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 	const username = info["user"]["username"];
 	const title = info["title"];
 
-	const metadata = new SoundcloudTrackMetadata();
+	const metadata = new SoundCloudTrackMetadata();
 	metadata.username = username;
 	metadata.title = title;
 
@@ -245,7 +245,7 @@ export async function download(song: Song): Promise<SoundcloudTrackMetadata> {
 	}
 
 	song.downloading = true;
-	return new Promise<SoundcloudTrackMetadata>((resolve, _reject) => {
+	return new Promise<SoundCloudTrackMetadata>((resolve, _reject) => {
 		// Writing the data
 		let writtenBytes = 0;
 		stream.on("data", (data) => {

@@ -22,7 +22,7 @@ function parseProvider(_url: string | URL) {
 		}
 	}
 
-	if (url.hostname.endsWith("soundcloud.com")) return SongProvider.Soundcloud;
+	if (url.hostname.endsWith("soundcloud.com")) return SongProvider.SoundCloud;
 	else if (
 		url.hostname.endsWith("youtube.com") ||
 		url.hostname.endsWith("youtu.be")
@@ -128,12 +128,12 @@ function processQueue() {
 		}
 
 		if (song.downloaded) {
-			if (song.processed || song.provider == SongProvider.Soundcloud) {
+			if (song.processed || song.provider == SongProvider.SoundCloud) {
 				if (song.processed)
 					console.log(
 						"Finished processing song: " + song.getDisplay()
 					);
-				else if (song.provider == SongProvider.Soundcloud)
+				else if (song.provider == SongProvider.SoundCloud)
 					console.log(
 						"Finished downloading song: " + song.getDisplay()
 					);
@@ -167,7 +167,7 @@ function processQueue() {
 				case SongProvider.YouTube:
 					youtube.queuer.add(song);
 					break;
-				case SongProvider.Soundcloud:
+				case SongProvider.SoundCloud:
 					soundcloud.queuer.add(song);
 					break;
 				default:
