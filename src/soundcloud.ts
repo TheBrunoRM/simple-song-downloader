@@ -6,10 +6,16 @@ import { Song } from "./song";
 import Queuer from "./queuer";
 import "dotenv/config";
 import { config, log } from "./index";
+import LiveConsole from "./liveconsole";
 
 export class SoundCloudTrackMetadata {
 	username: string;
 	title: string;
+
+	constructor(username: string, title: string) {
+		this.username = username;
+		this.title = title;
+	}
 }
 
 let cachedClientID = process.env.SOUNDCLOUD_CLIENT_ID;
@@ -67,7 +73,7 @@ export async function searchTracks(query: string, limit: number = 5) {
 	const clientID = await getClientID();
 
 	if (clientID == null) {
-		console.log("Could not get SoundCloud client ID!");
+		LiveConsole.log("Could not get SoundCloud client ID!");
 		return;
 	}
 
@@ -118,7 +124,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 	const clientID = await getClientID();
 	if (clientID == null) {
 		song.failed = true;
-		console.log("Could not get soundcloud client ID!");
+		LiveConsole.log("Could not get soundcloud client ID!");
 		return;
 	}
 
@@ -129,7 +135,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 
 	if (!data.ok) {
 		song.failed = true;
-		console.log("Could not get track information!");
+		LiveConsole.log("Could not get track information!");
 
 		if (data.status == 401) {
 			cachedClientID = null;
@@ -143,7 +149,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 
 	if (!info) {
 		song.failed = true;
-		console.log("Could not get track information!");
+		LiveConsole.log("Could not get track information!");
 		return;
 	}
 
@@ -151,7 +157,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 	const track_authorization = info["track_authorization"];
 	if (!track_authorization) {
 		song.failed = true;
-		console.log("Could not get the track authorization!");
+		LiveConsole.log("Could not get the track authorization!");
 		return;
 	}
 
@@ -160,7 +166,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 
 	if (formats.length <= 0) {
 		song.failed = true;
-		console.log("Could not get the media types from the track!");
+		LiveConsole.log("Could not get the media types from the track!");
 		return;
 	}
 
@@ -174,9 +180,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 	const username = info["user"]["username"];
 	const title = info["title"];
 
-	const metadata = new SoundCloudTrackMetadata();
-	metadata.username = username;
-	metadata.title = title;
+	const metadata = new SoundCloudTrackMetadata(username, title);
 
 	song.soundcloudMetadata = metadata;
 
@@ -194,7 +198,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 	if (fs.existsSync(finalPath)) {
 		bytesAlreadyWritten = fs.readFileSync(finalPath).length;
 		if (bytesAlreadyWritten > 0) {
-			console.log("Warning, the file already exists!");
+			LiveConsole.log("Warning, the file already exists!");
 			let newPath = "";
 			let i = 1;
 			while (true) {
@@ -204,7 +208,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 				}
 				i++;
 			}
-			console.log("New path: " + newPath);
+			LiveConsole.log("New path: " + newPath);
 			finalPath = newPath;
 		}
 	}
@@ -240,7 +244,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 	// Do not download if it is already downloaded
 	if (length > 0 && bytesAlreadyWritten >= length) {
 		song.downloaded = true;
-		console.log("The file is completely downloaded!");
+		LiveConsole.log("The file is completely downloaded!");
 		return;
 	}
 

@@ -1,14 +1,17 @@
 import { MoreVideoDetails, VideoDetails, videoInfo } from "ytdl-core";
 import { SoundCloudTrackMetadata } from "./soundcloud.js";
+import LiveConsole from "./liveconsole.js";
 
 export enum SongProvider {
 	YouTube,
+	YouTubeMusic,
 	SoundCloud,
 }
 
 export class Song {
 	url: string = null;
 	provider: SongProvider;
+	title: string = "";
 
 	parentFolder: string = "";
 	downloadPath: string = "";
@@ -32,6 +35,11 @@ export class Song {
 	youtubeMetadata: MoreVideoDetails;
 	soundcloudMetadata: SoundCloudTrackMetadata;
 
+	line = LiveConsole.log(this.getDisplay());
+	updateLine(text: string) {
+		this.line.update(this.getDisplay() + ": " + text);
+	}
+
 	getDisplay() {
 		if (this.youtubeMetadata) {
 			let authorname =
@@ -49,7 +57,7 @@ export class Song {
 				this.soundcloudMetadata.title
 			);
 
-		return this.url;
+		return this.title || this.url;
 	}
 
 	constructor(_url: string, _provider: SongProvider, _parentFolder?: string) {

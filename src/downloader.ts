@@ -7,6 +7,7 @@ import ytpl from "ytpl";
 import path from "path";
 import fs from "fs";
 import { log } from "./index";
+import LiveConsole from "./liveconsole";
 
 const queue: Song[] = [];
 
@@ -17,7 +18,7 @@ function parseProvider(_url: string | URL) {
 		try {
 			url = new URL(_url);
 		} catch (e) {
-			console.error("Couldn't parse URL: " + _url);
+			LiveConsole.outputLine.update("Couldn't parse URL: " + _url);
 			return null;
 		}
 	}
@@ -30,7 +31,7 @@ function parseProvider(_url: string | URL) {
 		return SongProvider.YouTube;
 	}
 
-	console.error("Unknown song provider: " + url.hostname);
+	LiveConsole.outputLine.update("Unknown song provider: " + url.hostname);
 	return null;
 }
 
@@ -42,7 +43,7 @@ async function add(_url: string, _parentFolder?: string) {
 		provider == SongProvider.YouTube &&
 		url.pathname.startsWith("/playlist")
 	) {
-		console.log("Getting songs from YouTube playlist...");
+		LiveConsole.outputLine.update("Getting songs from YouTube playlist...");
 		const playlist = await ytpl
 			.getPlaylistID(_url)
 			.then((id) => ytpl(id))
@@ -101,10 +102,9 @@ function processQueue() {
 	for (const song of [...queue]) {
 		if (!listfile.includes(song.url))
 			fs.appendFileSync("queue_list.txt", "\n" + song.url);
+
 		if (song.download_tries > 5) {
-			console.warn(
-				"Could not download song after 5 tries, removing from queue and adding to the failed list."
-			);
+			song.updateLine("Failed too many times, added to failed list.");
 			if (!fs.existsSync("failed_list.txt"))
 				fs.writeFileSync("failed_list.txt", "");
 			fs.appendFileSync(
@@ -114,10 +114,12 @@ function processQueue() {
 			queue.splice(queue.indexOf(song), 1);
 			continue;
 		}
+
 		if (song.failed) {
-			console.log(
-				"failed working with song, adding to the end of the list: " +
-					song.getDisplay()
+			song.updateLine(
+				`Failed, retrying later (${
+					song.download_tries + song.process_tries
+				} failed attempts)`
 			);
 			song.working = false;
 			song.failed = false;
@@ -129,20 +131,23 @@ function processQueue() {
 
 		if (song.downloaded) {
 			if (song.processed || song.provider == SongProvider.SoundCloud) {
+				song.updateLine("Sucessfully downloaded.");
+				/*
 				if (song.processed)
-					console.log(
+					song.updateLine(
 						"Finished processing song: " + song.getDisplay()
 					);
 				else if (song.provider == SongProvider.SoundCloud)
-					console.log(
+					song.updateLine(
 						"Finished downloading song: " + song.getDisplay()
 					);
+					*/
 				// remove song from queue
 				queue.splice(queue.indexOf(song), 1);
 				continue;
 			}
 			if (song.process_tries >= 3) {
-				console.error("Could not process song", song);
+				song.updateLine("Could not process.");
 				if (!fs.existsSync("failed_list.txt"))
 					fs.writeFileSync("failed_list.txt", "");
 				fs.appendFileSync(
@@ -152,9 +157,7 @@ function processQueue() {
 				queue.splice(queue.indexOf(song), 1);
 				continue;
 			}
-			console.log(
-				"Song got downloaded, processing: " + song.getDisplay()
-			);
+			song.updateLine("In queue to process...");
 			processer.queuer.add(song);
 			continue;
 		}
@@ -162,7 +165,7 @@ function processQueue() {
 		if (song.working) continue;
 
 		if (!song.downloading) {
-			console.log("Adding song to download list: " + song.url);
+			song.updateLine("Waiting to download...");
 			switch (song.provider) {
 				case SongProvider.YouTube:
 					youtube.queuer.add(song);
@@ -171,23 +174,24 @@ function processQueue() {
 					soundcloud.queuer.add(song);
 					break;
 				default:
-					console.log("Unknown song provider: " + song.provider);
+					song.updateLine("Unknown song provider: " + song.provider);
 					continue;
 			}
 			song.working = true;
 		} else {
 			// skip songs that are already being worked on
 			if (song.downloading || song.processing) continue;
-			console.warn(
-				"Warning: unknown song state, removing from queue: " + song.url
-			);
+			// unknown song state, just remove it
 			queue.splice(queue.indexOf(song), 1);
 			continue;
 		}
 	}
+
 	UpdateListFile();
-	if (queue.length <= 0)
-		console.log("The queue is empty. Waiting for input...");
+	if (queue.length <= 0 && !LiveConsole.outputLine.text)
+		LiveConsole.outputLine.update(
+			"The queue is empty. Waiting for input..."
+		);
 }
 
 const getQueue = () => queue;

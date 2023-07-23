@@ -1,11 +1,12 @@
 import downloader from "./downloader";
-import { searchTracks } from "./soundcloud";
+import { download, searchTracks } from "./soundcloud";
 import fs from "fs";
 import youtubeMusic from "./youtube-music";
 import readline, { Key } from "readline";
 import fetch from "node-fetch";
 import "source-map-support/register";
 import processer from "./processer";
+import LiveConsole from "./liveconsole";
 
 let searchedTracks = null;
 let selectingProvider = false;
@@ -32,34 +33,55 @@ async function main() {
 	}
 	config = fs.readFileSync("config.json").toJSON();
 
-	console.log("Type the name of the song you want to download:");
+	addSongsFromQueueFile();
+
+	LiveConsole.outputLine.update(
+		"Type the name of the song you want to download:"
+	);
+
+	process.stdin.setRawMode(true);
 	readline.emitKeypressEvents(process.stdin);
 
-	process.stdin.on("keypress", (str: String, key: Key) => {
-		//if (!str && !key) return;
-		if (key.name == "c" && key.ctrl) {
-			console.log("CTRL-C called, see you next time!");
-			process.exit();
-		}
+	process.stdin.on("keypress", (str: string, key: Key) => {
 		if (selectingProvider) {
 			switch (key.name) {
 				case "s":
-					console.log("Selected SoundCloud");
+					LiveConsole.outputLine.update("Selected SoundCloud");
 					break;
 				case "y":
-					console.log("Selected YouTube");
+					LiveConsole.outputLine.update("Selected YouTube");
 					break;
 				case "m":
-					console.log("Selected YouTube Music");
+					LiveConsole.outputLine.update("Selected YouTube Music");
 					break;
 				default:
-					console.log("Invalid provider, operation cancelled");
+					LiveConsole.outputLine.update(
+						"Invalid provider, operation cancelled"
+					);
 					break;
 			}
 			selectingProvider = false;
 			selectedProvider = key.name;
-			process.stdin.setRawMode(false);
+			//process.stdin.setRawMode(false);
+			LiveConsole.inputLine.text = "";
+			return processText(key.name);
+		}
+
+		if (key.name == "return") {
+			processText(LiveConsole.inputLine.text);
+			LiveConsole.inputLine.text = "";
 			return;
+		}
+		let newText = LiveConsole.inputLine.text;
+		if (key.name == "backspace")
+			newText = newText.substring(0, newText.length - 1);
+		else newText += str;
+		LiveConsole.inputLine.update(newText);
+
+		//if (!str && !key) return;
+		if (key.name == "c" && key.ctrl) {
+			LiveConsole.log("CTRL-C called, see you next time!");
+			process.exit();
 		}
 		/*
 		if (key.name == "q") {
@@ -70,88 +92,107 @@ async function main() {
 			readline.clearLine(process.stdout, 0);
 			return;
 		}
-		console.log(key);
+		LiveConsole.log(key);
 		*/
 	});
 
 	process.stdin.addListener("data", async (data) => {
 		//if (data.compare(Buffer.from("0d0a", "hex")) == 0) return;
+		return;
 		if (!data) return;
 		let text;
 		try {
 			text = data.toString()?.trim();
 		} catch (e) {
-			console.log("Couldn't parse string!");
-			console.log(e);
+			LiveConsole.log("Couldn't parse string!");
+			LiveConsole.log(e);
 			return;
 		}
 		if (!text) return;
-		if (text == "download_ffmpeg") {
+		processText(text);
+	});
+}
+
+function processText(text: string) {
+	LiveConsole.outputLine.update("text: " + text);
+
+	switch (text.trim().toLowerCase()) {
+		case "download_ffmpeg":
 			processer.downloadFfmpeg();
 			return;
-		}
-		if (selectedProvider) {
-			switch (selectedProvider) {
-				case "s":
-					searchSoundCloud(searchedText);
-					break;
-				case "m":
-					searchYouTubeMusic(searchedText);
-					break;
-				case "y":
-					searchYouTube(searchedText);
-					break;
-				default:
-					break;
-			}
+		case "queue":
+			const queue = downloader.getQueue();
+			LiveConsole.outputLine.update(
+				queue.map((song) => song.getDisplay()).join("\n") +
+					`\nCurrent queue: ${queue.length} songs`
+			);
+			return;
+	}
 
-			searchedText = null;
-			selectedProvider = null;
+	if (selectedProvider) {
+		switch (selectedProvider) {
+			case "s":
+				searchSoundCloud(searchedText);
+				break;
+			case "m":
+				searchYouTubeMusic(searchedText);
+				break;
+			case "y":
+				searchYouTube(searchedText);
+				break;
+			default:
+				break;
+		}
+
+		searchedText = null;
+		selectedProvider = null;
+		return;
+	}
+
+	let url = null;
+	if (searchedTracks) {
+		let int = parseInt(text);
+		if (isNaN(int)) {
+			searchedTracks = null;
+			return LiveConsole.outputLine.update(
+				"Track number not selected, cancelled operation."
+			);
+		}
+		const track = searchedTracks[int];
+		if (!track)
+			return LiveConsole.outputLine.update(
+				`Could not find track with ID ${int}. Number needs to be between 0 and ${
+					searchedTracks.length || 0
+				}`
+			);
+		url = track.permalink_url || track.url;
+		searchedTracks = null;
+		LiveConsole.outputLine.update("");
+	}
+
+	if (!url) {
+		try {
+			new URL(text);
+			url = text;
+		} catch (e) {
+			searchedText = text;
+			LiveConsole.outputLine.update(
+				"Select provider: SoundCloud [s] | YouTube [y] | YouTube Music [m]"
+			);
+			selectingProvider = true;
+			//process.stdin.setRawMode(true);
 			return;
 		}
+	}
 
-		let url = null;
-		if (searchedTracks) {
-			let int = parseInt(text);
-			if (isNaN(int)) {
-				searchedTracks = null;
-				return console.log("Cancelled operation.");
-			}
-			if (!searchedTracks)
-				return console.log("You need to search tracks first!");
-			const track = searchedTracks[int];
-			if (!track)
-				return console.log(`Could not find track with ID ${int}`);
-			url = track.permalink_url || track.url;
-			searchedTracks = null;
-		}
-
-		if (!url) {
-			try {
-				new URL(text);
-				url = text;
-			} catch (e) {
-				searchedText = text;
-				console.log(
-					"Select provider: SoundCloud [s] | YouTube [y] | YouTube Music [m]"
-				);
-				selectingProvider = true;
-				process.stdin.setRawMode(true);
-				return;
-			}
-		}
-
-		downloader.add(url);
-	});
-
-	addSongsFromQueueFile();
+	downloader.add(url);
 }
 
 main();
 
 process.on("uncaughtException", (e) => {
-	console.log("Uncaught exception!");
-	console.log(e);
+	//LiveConsole.log("Uncaught exception!");
+	fs.writeFileSync("./errors", e.stack);
 });
 
 function addSongsFromQueueFile() {
@@ -164,79 +205,83 @@ function addSongsFromQueueFile() {
 		downloader.add(line);
 		queued++;
 	}
-	if (queued > 0) console.log(`Queued ${queued} songs from the queue file.`);
+	if (queued > 0)
+		LiveConsole.log(`Queued ${queued} songs from the queue file.`);
 }
 
 async function searchSoundCloud(text: string) {
 	// search soundcloud
-	console.log("Searching SoundCloud tracks: " + text);
+	LiveConsole.outputLine.update("Searching SoundCloud tracks: " + text);
 	const start = performance.now();
 	const tracks: any = await searchTracks(text);
 	searchedTracks = tracks.collection;
 	let i = 0;
+	let t = "";
 	for (const track of tracks.collection) {
-		console.log(`${i} > ${track.title}`);
+		t += `${i} > ${track.title}` + "\n";
 		/*
-							console.log("-------------- " + i + " -------------- ");
-							console.log(`${track.title}`);
-							console.log(`User: ${track.user.username}`);
-							console.log(`Artist: ${track.publisher_metadata?.artist}`);
-							console.log(
+							LiveConsole.log("-------------- " + i + " -------------- ");
+							LiveConsole.log(`${track.title}`);
+							LiveConsole.log(`User: ${track.user.username}`);
+							LiveConsole.log(`Artist: ${track.publisher_metadata?.artist}`);
+							LiveConsole.log(
 								`Writer/Composer: ${track.publisher_metadata?.writer_composer}`
 							);
-							console.log(`URL: ${track.permalink_url}`);
+							LiveConsole.log(`URL: ${track.permalink_url}`);
 							*/
 		i++;
 	}
-	console.log("-------------------------------");
-	console.log(
+	t += "-------------------------------\n";
+	t +=
 		`Found ${tracks.collection.length} tracks in ${Math.round(
 			performance.now() - start
-		)}ms`
-	);
-	console.log("Type the track number to download it.");
+		)}ms` + "\n";
+	t += "Type the track number to download it.";
+	LiveConsole.outputLine.update(t);
 }
 
 async function searchYouTubeMusic(text: string) {
-	console.log("Searching YouTube Music songs: " + text);
+	LiveConsole.outputLine.update("Searching YouTube Music songs: " + text);
 	const start = performance.now();
 
 	const results = await youtubeMusic.search(text);
 	searchedTracks = results;
 
-	console.log(
-		`Found ${results.length} tracks in ${Math.round(
-			performance.now() - start
-		)}ms`
-	);
-	console.log("Type the track number to download it.");
-
 	let i = 0;
+	let t = "";
 	for (const song of results) {
-		console.log(i + " > " + song.artist + " - " + song.name);
+		t += i + " > " + song.artist + " - " + song.name + "\n";
 		i++;
 	}
+
+	t +=
+		`Found ${results.length} tracks in ${Math.round(
+			performance.now() - start
+		)}ms` + "\n";
+	t += "Type the track number to download it.";
+	LiveConsole.outputLine.update(t);
 }
 
 async function searchYouTube(text: string) {
-	console.log("Searching YouTube songs: " + text);
+	LiveConsole.outputLine.update("Searching YouTube songs: " + text);
 	const start = performance.now();
 
-	const results = await searchYouTube2(text);
+	const results = await searchYouTube2(text).then((r) => r.slice(0, 5));
 	searchedTracks = results;
 
-	console.log(
-		`Found ${results.length} tracks in ${Math.round(
-			performance.now() - start
-		)}ms`
-	);
-	console.log("Type the track number to download it.");
-
 	let i = 0;
+	let t = "";
 	for (const song of results) {
-		console.log(i + " > " + song.owner + " - " + song.title);
+		t += i + " > " + song.owner + " - " + song.title + "\n";
 		i++;
 	}
+
+	t +=
+		`Found ${results.length} tracks in ${Math.round(
+			performance.now() - start
+		)}ms` + "\n";
+	t += "Type the track number to download it.";
+	LiveConsole.outputLine.update(t);
 }
 
 async function searchYouTube2(query: string) {

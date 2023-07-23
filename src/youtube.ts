@@ -10,6 +10,7 @@ import Queuer from "./queuer";
 import { Song } from "./song";
 import { setTimeout } from "timers/promises";
 import { log } from "./index";
+import LiveConsole from "./liveconsole";
 
 const MAX_CONTENT_LENGTH = 1024 * 1024 * 16;
 const DOWNLOAD_PATH = "downloaded";
@@ -69,7 +70,7 @@ export async function download(song: Song) {
 	});
 	if (info == null) {
 		song.failed = true;
-		console.log("Could not get info: " + url);
+		LiveConsole.log("Could not get info: " + url);
 		return;
 	}
 	song.youtubeMetadata = info.videoDetails;
@@ -134,8 +135,8 @@ export async function download(song: Song) {
 		downloaded = ytdl.downloadFromInfo(info, options);
 	} catch (e) {
 		song.failed = true;
-		console.log("Could not download: " + url);
-		console.log(e);
+		LiveConsole.log("Could not download: " + url);
+		LiveConsole.log(e);
 		return;
 	}
 
@@ -154,7 +155,7 @@ export async function download(song: Song) {
 			setTimeout(10000, () => {
 				if (!song.downloading) return;
 				if (currentUpdate == lastUpdate) {
-					console.log(
+					song.updateLine(
 						"Download yielded for 10 seconds! Cancelling download."
 					);
 					cancelled = true;
@@ -171,12 +172,12 @@ export async function download(song: Song) {
 		});
 
 		let lastAnnounce = 0;
-		downloaded.on("progress", (_len, cur, tot) => {
-			if (Date.now() < lastAnnounce + 5000) return;
+		downloaded.on("progress", async (_len, cur, tot) => {
+			//if (Date.now() < lastAnnounce + 5000) return;
 			const per = (cur / tot) * 100;
-			console.log(
+			song.updateLine(
 				`Download of ${info.videoDetails.title}: ${
-					per + "%"
+					per.toFixed(2) + "%"
 				} (${parseMB(cur)}MB / ${parseMB(tot)}MB)`
 			);
 			lastAnnounce = Date.now();

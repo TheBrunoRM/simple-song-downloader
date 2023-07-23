@@ -16,14 +16,14 @@ export default class Queuer {
 	async add(song: Song) {
 		if (this.working) {
 			/*
-			console.log(
+			LiveConsole.log(
 				`${this.name || "Queuer"}: Adding song to queue: ${song.url}`
 			);
 			*/
 			this.queue.push(song);
 			return;
 		} /*else
-			console.log(
+			LiveConsole.log(
 				`${this.name || "Queuer"}: Working with song: ${song.url}`
 			);*/
 		this.working = true;

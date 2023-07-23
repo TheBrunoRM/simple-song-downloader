@@ -1,5 +1,6 @@
 import ytpl from "ytpl";
 import downloader from "./downloader";
+import LiveConsole from "./liveconsole";
 
 const genshin_playlists = [
 	"PLqWr7dyJNgLKAYaH8YO0QHPSX-G8tO5lF", // The Wind and the Star Traveler (has each song separate and a large video with all of them)
@@ -13,19 +14,19 @@ const genshin_playlists = [
 ];
 
 async function test() {
-	console.log(`downloading ${genshin_playlists.length} playlists...`);
+	LiveConsole.log(`downloading ${genshin_playlists.length} playlists...`);
 	for (const id of genshin_playlists) {
-		console.log(`getting info for playlist: ${id}`);
+		LiveConsole.log(`getting info for playlist: ${id}`);
 		const playlist = await ytpl(id);
 		const items = playlist.items;
-		console.log(
+		LiveConsole.log(
 			`downloading ${items.length} videos for playlist: ${playlist.title}`
 		);
 		for (let i = 0; i < items.length; i++) {
 			const item = items[i];
 			await downloader.add(item.url, "/genshin/" + playlist.title);
 		}
-		console.log(
+		LiveConsole.log(
 			`finished downloading ${items.length} from playlist: ${playlist.title}`
 		);
 		//await Promise.all(items.map(item => down(item.id, "/genshin/" + playlist.title)));
