@@ -7,6 +7,7 @@ import fetch from "node-fetch";
 import "source-map-support/register";
 import processer from "./processer";
 import LiveConsole from "./liveconsole";
+import ffmpeg from "fluent-ffmpeg";
 
 let searchedTracks = null;
 let selectingProvider = false;
@@ -31,7 +32,11 @@ async function main() {
 		// this will never log since the config file didn't exist
 		log("Config file created");
 	}
-	config = fs.readFileSync("config.json").toJSON();
+
+	config = JSON.parse(fs.readFileSync("config.json").toString());
+
+	const ffmpegPath = config.ffmpegPath;
+	if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
 
 	addSongsFromQueueFile();
 
@@ -56,7 +61,8 @@ async function main() {
 					break;
 				default:
 					LiveConsole.outputLine.update(
-						"Invalid provider, operation cancelled"
+						"Invalid provider, operation cancelled.\n" +
+							"Type the name of the song you want to download:"
 					);
 					break;
 			}
@@ -77,6 +83,7 @@ async function main() {
 			newText = newText.substring(0, newText.length - 1);
 		else newText += str;
 		LiveConsole.inputLine.update(newText);
+		LiveConsole.render();
 
 		//if (!str && !key) return;
 		if (key.name == "c" && key.ctrl) {
@@ -155,7 +162,8 @@ function processText(text: string) {
 		if (isNaN(int)) {
 			searchedTracks = null;
 			return LiveConsole.outputLine.update(
-				"Track number not selected, cancelled operation."
+				"Track number not selected, cancelled operation.\n" +
+					"Type the name of the song you want to download:"
 			);
 		}
 		const track = searchedTracks[int];
@@ -163,7 +171,7 @@ function processText(text: string) {
 			return LiveConsole.outputLine.update(
 				`Could not find track with ID ${int}. Number needs to be between 0 and ${
 					searchedTracks.length || 0
-				}`
+				}\n` + "Type the name of the song you want to download:"
 			);
 		url = track.permalink_url || track.url;
 		searchedTracks = null;
@@ -236,7 +244,7 @@ async function searchSoundCloud(text: string) {
 		`Found ${tracks.collection.length} tracks in ${Math.round(
 			performance.now() - start
 		)}ms` + "\n";
-	t += "Type the track number to download it.";
+	t += "Type the track number to download it.\nType anything else to cancel.";
 	LiveConsole.outputLine.update(t);
 }
 
@@ -258,7 +266,7 @@ async function searchYouTubeMusic(text: string) {
 		`Found ${results.length} tracks in ${Math.round(
 			performance.now() - start
 		)}ms` + "\n";
-	t += "Type the track number to download it.";
+	t += "Type the track number to download it.\nType anything else to cancel.";
 	LiveConsole.outputLine.update(t);
 }
 
@@ -280,7 +288,7 @@ async function searchYouTube(text: string) {
 		`Found ${results.length} tracks in ${Math.round(
 			performance.now() - start
 		)}ms` + "\n";
-	t += "Type the track number to download it.";
+	t += "Type the track number to download it.\nType anything else to cancel.";
 	LiveConsole.outputLine.update(t);
 }
 

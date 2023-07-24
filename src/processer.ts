@@ -44,11 +44,15 @@ export async function processSong(song: Song) {
 
 	log("processing with ffmpeg: " + downloadPath + " to " + finalFilePath);
 	song.processing = true;
+	song.updateLine("Initializing process...");
 
 	return new Promise<void>((resolve, _reject) => {
 		ffmpeg(downloadPath)
 			.format("mp3")
 			.audioCodec("libmp3lame")
+			.on("start", () => {
+				song.updateLine("Starting to process...");
+			})
 			.on("progress", (progress) =>
 				song.updateLine(
 					`Processing: ${(progress.percent || 0).toFixed(2)}%`
@@ -61,7 +65,10 @@ export async function processSong(song: Song) {
 				resolve();
 			})
 			.on("error", async (err) => {
-				if (err.message.includes("Cannot find ffmpeg")) {
+				if (
+					err.message.includes("Cannot find ffmpeg") ||
+					err.message.includes("ENOENT")
+				) {
 					ffmpegNotFound = true;
 					await downloadFfmpeg();
 					return resolve(null);
@@ -85,16 +92,17 @@ import { config, saveConfig } from "./index";
 import AdmZip from "adm-zip";
 
 async function downloadFfmpeg() {
-	LiveConsole.log("Downloading FFmpeg...");
+	const prefix = "[FFmpeg] ";
+	const msg = LiveConsole.log(prefix + "Downloading...");
 	const res = await fetch(
 		`https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-lgpl-shared.zip`
 	);
 	const buffer = await res.buffer();
-	LiveConsole.log("Downloaded, writing...");
+	msg.update(prefix + "Downloaded, writing...");
 	await new Promise((res, rej) =>
 		fs.writeFile("./ffmpeg.zip", Buffer.from(buffer), () => res(true))
 	);
-	LiveConsole.log("Writed, extracting...");
+	msg.update(prefix + "Writed, extracting...");
 	const zip = new AdmZip("./ffmpeg.zip");
 	zip.extractAllTo("./ffmpeg/");
 	const ffmpegPath =
@@ -102,5 +110,7 @@ async function downloadFfmpeg() {
 	ffmpeg.setFfmpegPath(ffmpegPath);
 	config.ffmpegPath = ffmpegPath;
 	saveConfig();
-	LiveConsole.log("FFmpeg path set to " + ffmpegPath);
+	msg.update(
+		prefix + "Installation completed, FFmpeg path set to " + ffmpegPath
+	);
 }

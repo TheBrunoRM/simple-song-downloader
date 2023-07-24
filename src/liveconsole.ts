@@ -3,6 +3,18 @@ class ConsoleLine {
 
 	update(newText: string) {
 		this.text = newText;
+		const i = LiveConsole.lines.indexOf(this);
+		if (i > -1) {
+			// if this line is on the list
+			// remove it and add it at the end
+			// to show it last
+
+			// this is because it may be hard to notice
+			// that the line changed
+
+			LiveConsole.lines.splice(i, 1);
+			LiveConsole.lines.push(this);
+		}
 	}
 
 	constructor(text: string) {
