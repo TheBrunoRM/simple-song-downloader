@@ -21,6 +21,7 @@ export const log = (...t) => {
 export let config;
 export const saveConfig = () =>
 	fs.writeFileSync("config.json", Buffer.from(JSON.stringify(config)));
+export let outputLineOccupied = false;
 
 async function main() {
 	console.clear();
@@ -121,8 +122,6 @@ async function main() {
 }
 
 function processText(text: string) {
-	LiveConsole.outputLine.update("text: " + text);
-
 	switch (text.trim().toLowerCase()) {
 		case "download_ffmpeg":
 			processer.downloadFfmpeg();
@@ -130,8 +129,10 @@ function processText(text: string) {
 		case "queue":
 			const queue = downloader.getQueue();
 			LiveConsole.outputLine.update(
-				queue.map((song) => song.getDisplay()).join("\n") +
-					`\nCurrent queue: ${queue.length} songs`
+				queue
+					.map((song) => song.getDisplay())
+					.concat(`Current queue: ${queue.length} songs`)
+					.join("\n")
 			);
 			return;
 	}
@@ -161,6 +162,7 @@ function processText(text: string) {
 		let int = parseInt(text);
 		if (isNaN(int)) {
 			searchedTracks = null;
+			outputLineOccupied = false;
 			return LiveConsole.outputLine.update(
 				"Track number not selected, cancelled operation.\n" +
 					"Type the name of the song you want to download:"
@@ -175,7 +177,12 @@ function processText(text: string) {
 			);
 		url = track.permalink_url || track.url;
 		searchedTracks = null;
-		LiveConsole.outputLine.update("");
+		outputLineOccupied = false;
+		LiveConsole.outputLine.update(
+			`${
+				downloader.getQueue().length
+			} elements in queue. Waiting for input...`
+		);
 	}
 
 	if (!url) {
@@ -218,6 +225,7 @@ function addSongsFromQueueFile() {
 }
 
 async function searchSoundCloud(text: string) {
+	outputLineOccupied = true;
 	// search soundcloud
 	LiveConsole.outputLine.update("Searching SoundCloud tracks: " + text);
 	const start = performance.now();
@@ -249,6 +257,7 @@ async function searchSoundCloud(text: string) {
 }
 
 async function searchYouTubeMusic(text: string) {
+	outputLineOccupied = true;
 	LiveConsole.outputLine.update("Searching YouTube Music songs: " + text);
 	const start = performance.now();
 
@@ -271,6 +280,7 @@ async function searchYouTubeMusic(text: string) {
 }
 
 async function searchYouTube(text: string) {
+	outputLineOccupied = true;
 	LiveConsole.outputLine.update("Searching YouTube songs: " + text);
 	const start = performance.now();
 

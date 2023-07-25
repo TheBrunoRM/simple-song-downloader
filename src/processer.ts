@@ -91,18 +91,46 @@ import { config, saveConfig } from "./index";
 
 import AdmZip from "adm-zip";
 
+function parseMB(bytes: number) {
+	return (bytes / 1024 / 1024).toFixed(2);
+}
+
 async function downloadFfmpeg() {
 	const prefix = "[FFmpeg] ";
-	const msg = LiveConsole.log(prefix + "Downloading...");
+	const msg = LiveConsole.log(prefix + "Starting download...");
 	const res = await fetch(
 		`https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-lgpl-shared.zip`
 	);
-	const buffer = await res.buffer();
-	msg.update(prefix + "Downloaded, writing...");
-	await new Promise((res, rej) =>
-		fs.writeFile("./ffmpeg.zip", Buffer.from(buffer), () => res(true))
-	);
-	msg.update(prefix + "Writed, extracting...");
+	const contentLength = +res.headers.get("Content-Length");
+	let receivedBytes = 0;
+	const chunks = [];
+	const stream = fs.openSync("./ffmpeg.zip", "a");
+	await new Promise<void>((resolve, reject) => {
+		res.body.on("data", (chunk) => {
+			chunks.push(chunk);
+			receivedBytes += chunk.length;
+			msg.update(
+				prefix +
+					"Downloading... " +
+					`${parseMB(receivedBytes)}MB / ${parseMB(contentLength)}MB`
+			);
+			fs.writeSync(stream, chunk);
+			if (receivedBytes >= contentLength) resolve();
+		});
+		res.body.on("end", () => {
+			resolve();
+		});
+		res.body.on("close", () => {
+			resolve();
+		});
+	});
+	let buffer = new Uint8Array(receivedBytes); // (4.1)
+	let position = 0;
+	for (let chunk of chunks) {
+		buffer.set(chunk, position); // (4.2)
+		position += chunk.length;
+	}
+	msg.update(prefix + "Downloaded, extracting...");
 	const zip = new AdmZip("./ffmpeg.zip");
 	zip.extractAllTo("./ffmpeg/");
 	const ffmpegPath =

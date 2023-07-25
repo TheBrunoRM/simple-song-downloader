@@ -6,7 +6,7 @@ import processer from "./processer";
 import ytpl from "ytpl";
 import path from "path";
 import fs from "fs";
-import { log } from "./index";
+import { log, outputLineOccupied } from "./index";
 import LiveConsole from "./liveconsole";
 
 const queue: Song[] = [];
@@ -188,7 +188,7 @@ function processQueue() {
 	}
 
 	UpdateListFile();
-	if (queue.length <= 0 && !LiveConsole.outputLine.text)
+	if (queue.length <= 0 && !outputLineOccupied)
 		LiveConsole.outputLine.update(
 			"The queue is empty. Waiting for input..."
 		);
