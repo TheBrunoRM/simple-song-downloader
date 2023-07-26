@@ -9,7 +9,7 @@ import { Readable } from "node:stream";
 import Queuer from "./queuer";
 import { Song } from "./song";
 import { setTimeout } from "timers/promises";
-import { log } from "./index";
+import { log, writeError } from "./index";
 import LiveConsole from "./liveconsole";
 
 const MAX_CONTENT_LENGTH = 1024 * 1024 * 16;
@@ -63,14 +63,19 @@ export async function download(song: Song) {
 	song.download_tries++;
 
 	log("getting info for: " + url);
+	let error = null;
 	const info: videoInfo = await ytdl.getInfo(url).catch((e) => {
+		/*
 		console.warn(`Error getting info for ${url}`);
 		console.error(e);
+		*/
+		writeError(e.stack);
+		error = e;
 		return null;
 	});
-	if (info == null) {
+	if (info == null || error) {
 		song.failed = true;
-		LiveConsole.log("Could not get info: " + url);
+		song.updateLine("Could not get info: " + url + "\n" + error.stack);
 		return;
 	}
 	song.youtubeMetadata = info.videoDetails;

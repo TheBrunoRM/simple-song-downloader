@@ -207,8 +207,12 @@ main();
 
 process.on("uncaughtException", (e) => {
 	//LiveConsole.log("Uncaught exception!");
-	fs.writeFileSync("./errors", e.stack);
+	writeError(e.stack);
 });
+
+export function writeError(text: string) {
+	fs.writeFileSync("./errors", text);
+}
 
 function addSongsFromQueueFile() {
 	if (!fs.existsSync("queue_list.txt")) return;
