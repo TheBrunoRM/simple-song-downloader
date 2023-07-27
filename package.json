@@ -38,7 +38,7 @@
 		"node-fetch": "^2.6.12",
 		"soundcloud-downloader": "^1.0.0",
 		"typescript": "^4.9.4",
-		"ytdl-core": "git+https://github.com/dim4ik1106/node-ytdl-core.git#master",
+		"ytdl-core": "^4.11.5",
 		"ytpl": "^2.3.0"
 	},
 	"devDependencies": {

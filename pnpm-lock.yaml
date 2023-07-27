@@ -17,7 +17,7 @@ specifiers:
   soundcloud-downloader: ^1.0.0
   source-map-support: ^0.5.21
   typescript: ^4.9.4
-  ytdl-core: git+https://github.com/dim4ik1106/node-ytdl-core.git#master
+  ytdl-core: ^4.11.5
   ytpl: ^2.3.0
 
 dependencies:
@@ -29,7 +29,7 @@ dependencies:
   node-fetch: 2.6.12
   soundcloud-downloader: 1.0.0
   typescript: 4.9.5
-  ytdl-core: github.com/dim4ik1106/node-ytdl-core/ba74a24daa1c29965673a600285274845b11ce77
+  ytdl-core: 4.11.5
   ytpl: 2.3.0
 
 devDependencies:
@@ -1935,6 +1935,15 @@ packages:
       yargs-parser: 20.2.9
     dev: true
 
+  /ytdl-core/4.11.5:
+    resolution: {integrity: sha512-27LwsW4n4nyNviRCO1hmr8Wr5J1wLLMawHCQvH8Fk0hiRqrxuIu028WzbJetiYH28K8XDbeinYW4/wcHQD1EXA==}
+    engines: {node: '>=12'}
+    dependencies:
+      m3u8stream: 0.8.6
+      miniget: 4.2.3
+      sax: 1.2.4
+    dev: false
+
   /ytpl/2.3.0:
     resolution: {integrity: sha512-Cfw2rxq3PFK6qgWr2Z8gsRefVahEzbn9XEuiJldqdXHE6GhO7kTfEvbZKdfXing1SmgW635uJ/UL2g8r0fvu2Q==}
     engines: {node: '>=8'}
@@ -1950,14 +1959,3 @@ packages:
       compress-commons: 4.1.1
       readable-stream: 3.6.2
     dev: true
-
-  github.com/dim4ik1106/node-ytdl-core/ba74a24daa1c29965673a600285274845b11ce77:
-    resolution: {tarball: https://codeload.github.com/dim4ik1106/node-ytdl-core/tar.gz/ba74a24daa1c29965673a600285274845b11ce77}
-    name: ytdl-core
-    version: 0.0.0-development
-    engines: {node: '>=12'}
-    dependencies:
-      m3u8stream: 0.8.6
-      miniget: 4.2.3
-      sax: 1.2.4
-    dev: false
