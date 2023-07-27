@@ -131,17 +131,11 @@ function processQueue() {
 
 		if (song.downloaded) {
 			if (song.processed || song.provider == SongProvider.SoundCloud) {
-				song.updateLine("Sucessfully downloaded.");
-				/*
 				if (song.processed)
-					song.updateLine(
-						"Finished processing song: " + song.getDisplay()
-					);
+					song.updateLine("Sucessfully downloaded and processed.");
 				else if (song.provider == SongProvider.SoundCloud)
-					song.updateLine(
-						"Finished downloading song: " + song.getDisplay()
-					);
-					*/
+					song.updateLine("Sucessfully downloaded.");
+
 				// remove song from queue
 				queue.splice(queue.indexOf(song), 1);
 				continue;
