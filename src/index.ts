@@ -16,7 +16,7 @@ let searchedText = null;
 
 export const log = (...t) => {
 	if (!config?.debug) return;
-	console.log(...t);
+	for (const a of t) LiveConsole.log(a.toString());
 };
 export let config;
 export const saveConfig = () =>
@@ -86,22 +86,10 @@ async function main() {
 		LiveConsole.inputLine.update(newText);
 		LiveConsole.render();
 
-		//if (!str && !key) return;
 		if (key.name == "c" && key.ctrl) {
 			LiveConsole.log("CTRL-C called, see you next time!");
 			process.exit();
 		}
-		/*
-		if (key.name == "q") {
-			process.stdout.write("testeo");
-			return;
-		}
-		if (key.name == "p") {
-			readline.clearLine(process.stdout, 0);
-			return;
-		}
-		LiveConsole.log(key);
-		*/
 	});
 
 	process.stdin.addListener("data", async (data) => {
