@@ -9,7 +9,7 @@ import { Readable } from "node:stream";
 import Queuer from "./queuer";
 import { Song } from "./song";
 import { setTimeout } from "timers/promises";
-import { log, writeError } from "./index";
+import { log, writeErrorStack } from "./index";
 import LiveConsole from "./liveconsole";
 
 const MAX_CONTENT_LENGTH = 1024 * 1024 * 16;
@@ -69,7 +69,7 @@ export async function download(song: Song) {
 		console.warn(`Error getting info for ${url}`);
 		console.error(e);
 		*/
-		writeError(e.stack);
+		writeErrorStack(e.stack);
 		error = e;
 		return null;
 	});

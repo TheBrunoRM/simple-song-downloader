@@ -3,7 +3,7 @@ import Queuer from "./queuer";
 import { Song } from "./song";
 import fs from "fs";
 import fetch from "node-fetch";
-import { log } from "./index";
+import { log, writeErrorStack } from "./index";
 import LiveConsole from "./liveconsole";
 
 let ffmpegNotFound = false;
@@ -47,37 +47,43 @@ export async function processSong(song: Song) {
 	song.updateLine("Initializing process...");
 
 	return new Promise<void>((resolve, _reject) => {
-		ffmpeg(downloadPath)
-			.format("mp3")
-			.audioCodec("libmp3lame")
-			.on("start", () => {
-				song.updateLine("Starting to process...");
-			})
-			.on("progress", (progress) =>
-				song.updateLine(
-					`Processing: ${(progress.percent || 0).toFixed(2)}%`
-				)
-			) // TODO loading bar
-			.on("end", function () {
-				song.processing = false;
-				song.processed = true;
-				log("Processing finished!");
-				resolve();
-			})
-			.on("error", async (err) => {
-				if (
-					err.message.includes("Cannot find ffmpeg") ||
-					err.message.includes("ENOENT")
-				) {
-					ffmpegNotFound = true;
-					await downloadFfmpeg();
-					return resolve(null);
-				}
-				song.failed = true;
-				song.updateLine("Could not process song: " + song.getDisplay());
-				LiveConsole.log(err);
-			})
-			.save(finalFilePath);
+		try {
+			ffmpeg(downloadPath)
+				.format("mp3")
+				.audioCodec("libmp3lame")
+				.on("start", () => {
+					song.updateLine("Starting to process...");
+				})
+				.on("progress", (progress) =>
+					song.updateLine(
+						`Processing: ${(progress.percent || 0).toFixed(2)}%`
+					)
+				) // TODO loading bar
+				.on("end", function () {
+					song.processing = false;
+					song.processed = true;
+					log("Processing finished!");
+					resolve();
+				})
+				.on("error", async (err) => {
+					if (
+						err.message.includes("Cannot find ffmpeg") ||
+						err.message.includes("ENOENT")
+					) {
+						song.updateLine("Could not find FFmpeg.");
+						ffmpegNotFound = true;
+						await downloadFfmpeg();
+						return resolve(null);
+					}
+					song.failed = true;
+					song.updateLine("Could not process song:\n" + err.stack);
+				})
+				.save(finalFilePath);
+		} catch (e) {
+			song.failed = true;
+			song.updateLine("Could not process song:\n" + e.stack);
+			writeErrorStack(e.stack);
+		}
 	});
 }
 

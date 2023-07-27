@@ -195,10 +195,10 @@ main();
 
 process.on("uncaughtException", (e) => {
 	//LiveConsole.log("Uncaught exception!");
-	writeError(e.stack);
+	writeErrorStack(e.stack);
 });
 
-export function writeError(text: string) {
+export function writeErrorStack(text: string) {
 	fs.writeFileSync("./errors", text);
 }
 
