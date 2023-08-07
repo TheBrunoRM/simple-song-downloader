@@ -1,4 +1,5 @@
-# simple-song-downloader v1.0.0
+# simple-song-downloader v1
+Leer esto en [Español](./readme/README.es.md)
 
 ## Download YouTube videos, YouTube Music songs, playlists, and SoundCloud tracks.
 
