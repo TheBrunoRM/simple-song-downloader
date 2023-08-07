@@ -53,8 +53,11 @@ class LiveConsole extends null {
 		for (const line of this.lines) {
 			text += line.text + "\n";
 		}
-		text += this.outputLine?.text + "\n" + this.inputLine?.text;
-		text += process.stdout.write(
+
+		if (this.outputLine?.text) text += this.outputLine.text + "\n";
+		if (this.inputLine?.text) text += this.inputLine.text;
+
+		process.stdout.write(
 			text.split("\n").slice(-process.stdout.rows).join("\n")
 		);
 

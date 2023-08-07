@@ -1,6 +1,6 @@
 import { Song, SongProvider } from "./song";
 
-import youtube from "./youtube.js";
+import youtube from "./youtube-downloader.js";
 import soundcloud from "./soundcloud.js";
 import processer from "./processer";
 import ytpl from "ytpl";

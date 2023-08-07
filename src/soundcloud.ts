@@ -7,6 +7,7 @@ import Queuer from "./queuer";
 import "dotenv/config";
 import { config, log } from "./index";
 import LiveConsole from "./liveconsole";
+import { Track } from "./track";
 
 export class SoundCloudTrackMetadata {
 	username: string;
@@ -67,6 +68,18 @@ async function getClientID(): Promise<string> {
 		}
 	}
 	return cachedClientID;
+}
+
+export async function searchSongs(
+	query: string,
+	limit: number = 5
+): Promise<Track[]> {
+	const json = await searchTracks(query, limit);
+	const tracks = json.collection;
+	return tracks.map(
+		(track) =>
+			new Track(track.permalink_url, track.title, track.user.username)
+	);
 }
 
 export async function searchTracks(query: string, limit: number = 5) {

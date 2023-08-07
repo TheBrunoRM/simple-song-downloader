@@ -1,4 +1,6 @@
 import fetch from "node-fetch";
+import { SongProvider } from "./song";
+import { Track } from "./track";
 
 let cachedKey = null;
 
@@ -30,7 +32,7 @@ async function getCookie() {
 	return process.env.YOUTUBE_COOKIE;
 }
 
-async function search(query: string) {
+async function search(query: string): Promise<Track[]> {
 	const key = await getKey();
 	const json: any = await fetch(
 		`https://music.youtube.com/youtubei/v1/search?key=${key}&prettyPrint=false`,
@@ -52,7 +54,7 @@ async function search(query: string) {
 				"x-youtube-bootstrap-logged-in": "false",
 				"x-youtube-client-name": "67",
 				"x-youtube-client-version": "1.20230712.01.00",
-				cookie: await getCookie(),
+				cookie: (await getCookie()) || "",
 				Referer: "https://music.youtube.com/",
 				"Referrer-Policy": "strict-origin-when-cross-origin",
 			},
@@ -102,6 +104,8 @@ async function search(query: string) {
 					},
 				},
 				query,
+				// this is so we only get the songs
+				params: "EgWKAQIIAWoSEAMQBBAJEA4QChAFEBEQEBAV",
 			}),
 			method: "POST",
 		}
@@ -114,6 +118,9 @@ async function search(query: string) {
 	const songs = contents
 		.find((a) => a.musicShelfRenderer?.title.runs[0].text == "Canciones")
 		.musicShelfRenderer.contents.map((a) => {
+			const subtitleTexts =
+				a.musicResponsiveListItemRenderer.flexColumns[1]
+					.musicResponsiveListItemFlexColumnRenderer.text.runs;
 			return {
 				url:
 					"https://youtu.be/" +
@@ -128,17 +135,27 @@ async function search(query: string) {
 				name: a.musicResponsiveListItemRenderer.flexColumns[0]
 					.musicResponsiveListItemFlexColumnRenderer.text.runs[0]
 					.text,
-				artist: a.musicResponsiveListItemRenderer.flexColumns[1].musicResponsiveListItemFlexColumnRenderer.text.runs.find(
-					(r) =>
-						r.navigationEndpoint?.browseEndpoint
-							.browseEndpointContextSupportedConfigs
-							.browseEndpointContextMusicConfig.pageType ==
-						"MUSIC_PAGE_TYPE_ARTIST"
+				artist: (
+					subtitleTexts.find(
+						(r) =>
+							r.navigationEndpoint?.browseEndpoint
+								.browseEndpointContextSupportedConfigs
+								.browseEndpointContextMusicConfig.pageType ==
+							"MUSIC_PAGE_TYPE_ARTIST"
+					) || subtitleTexts[0]
 				)?.text,
 			};
 		});
 
-	return songs;
+	return songs.map(
+		(song) =>
+			new Track(
+				song.url,
+				song.name,
+				song.artist,
+				SongProvider.YouTubeMusic
+			)
+	);
 }
 
 export default {

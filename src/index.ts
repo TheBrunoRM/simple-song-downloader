@@ -1,5 +1,5 @@
 import downloader from "./downloader";
-import { download, searchTracks } from "./soundcloud";
+import { download, searchSongs, searchTracks } from "./soundcloud";
 import fs from "fs";
 import youtubeMusic from "./youtube-music";
 import readline, { Key } from "readline";
@@ -8,10 +8,13 @@ import "source-map-support/register";
 import processer from "./processer";
 import LiveConsole from "./liveconsole";
 import ffmpeg from "fluent-ffmpeg";
+import path from "path";
+import { SongProvider } from "./song";
+import { Track } from "./track";
 
-let searchedTracks = null;
+let searchedTracks: Track[] = null;
 let selectingProvider = false;
-let selectedProvider = null;
+let selectedProvider: SongProvider = null;
 let searchedText = null;
 
 export const log = (...t) => {
@@ -20,21 +23,34 @@ export const log = (...t) => {
 };
 export let config;
 export const saveConfig = () =>
-	fs.writeFileSync("config.json", Buffer.from(JSON.stringify(config)));
+	fs.writeFileSync(configFilePath, Buffer.from(JSON.stringify(config)));
 export let outputLineOccupied = false;
+
+const AppData =
+	process.env.APPDATA ||
+	(process.platform == "darwin"
+		? process.env.HOME + "/Library/Preferences"
+		: process.env.HOME + "/.local/share");
+const AppDataFolder = path.join(AppData, require("../package.json").name);
+const configFilePath = path.join(AppDataFolder, "config.json");
 
 async function main() {
 	console.clear();
 	process.title = "Simple Song Downloader";
 
-	if (!fs.existsSync("config.json")) {
-		fs.writeFileSync("config.json", "{}");
+	if (!fs.existsSync(AppDataFolder)) {
+		fs.mkdirSync(AppDataFolder);
+		log("App data folder created");
+	}
+
+	if (!fs.existsSync(configFilePath)) {
+		fs.writeFileSync(configFilePath, "{}");
 
 		// this will never log since the config file didn't exist
 		log("Config file created");
 	}
 
-	config = JSON.parse(fs.readFileSync("config.json").toString());
+	config = JSON.parse(fs.readFileSync(configFilePath).toString());
 
 	const ffmpegPath = config.ffmpegPath;
 	if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
@@ -52,15 +68,19 @@ async function main() {
 		if (selectingProvider) {
 			switch (key.name) {
 				case "s":
+					selectedProvider = SongProvider.SoundCloud;
 					LiveConsole.outputLine.update("Selected SoundCloud");
 					break;
 				case "y":
+					selectedProvider = SongProvider.YouTube;
 					LiveConsole.outputLine.update("Selected YouTube");
 					break;
 				case "m":
+					selectedProvider = SongProvider.YouTubeMusic;
 					LiveConsole.outputLine.update("Selected YouTube Music");
 					break;
 				default:
+					selectedProvider = null;
 					LiveConsole.outputLine.update(
 						"Invalid provider, operation cancelled.\n" +
 							"Type the name of the song you want to download:"
@@ -68,7 +88,6 @@ async function main() {
 					break;
 			}
 			selectingProvider = false;
-			selectedProvider = key.name;
 			//process.stdin.setRawMode(false);
 			LiveConsole.inputLine.text = "";
 			return processText(key.name);
@@ -125,21 +144,8 @@ function processText(text: string) {
 			return;
 	}
 
-	if (selectedProvider) {
-		switch (selectedProvider) {
-			case "s":
-				searchSoundCloud(searchedText);
-				break;
-			case "m":
-				searchYouTubeMusic(searchedText);
-				break;
-			case "y":
-				searchYouTube(searchedText);
-				break;
-			default:
-				break;
-		}
-
+	if (SongProvider[selectedProvider]) {
+		searchTracksFromProvider(searchedText, selectedProvider);
 		searchedText = null;
 		selectedProvider = null;
 		return;
@@ -163,7 +169,7 @@ function processText(text: string) {
 					searchedTracks.length || 0
 				}\n` + "Type the name of the song you want to download:"
 			);
-		url = track.permalink_url || track.url;
+		url = track.url;
 		searchedTracks = null;
 		outputLineOccupied = false;
 		LiveConsole.outputLine.update(
@@ -182,6 +188,7 @@ function processText(text: string) {
 			LiveConsole.outputLine.update(
 				"Select provider: SoundCloud [s] | YouTube [y] | YouTube Music [m]"
 			);
+			LiveConsole.inputLine.update("");
 			selectingProvider = true;
 			//process.stdin.setRawMode(true);
 			return;
@@ -216,85 +223,49 @@ function addSongsFromQueueFile() {
 		LiveConsole.log(`Queued ${queued} songs from the queue file.`);
 }
 
-async function searchSoundCloud(text: string) {
+async function searchTracksFromProvider(
+	searchedText: string,
+	selectedProvider: SongProvider
+) {
 	outputLineOccupied = true;
-	// search soundcloud
-	LiveConsole.outputLine.update("Searching SoundCloud tracks: " + text);
+	LiveConsole.outputLine.update(
+		`Searching tracks (${SongProvider[selectedProvider]}): ${searchedText}`
+	);
 	const start = performance.now();
-	const tracks: any = await searchTracks(text);
-	searchedTracks = tracks.collection;
+
+	switch (selectedProvider) {
+		case SongProvider.SoundCloud:
+			searchedTracks = await searchSongs(searchedText);
+			break;
+		case SongProvider.YouTube:
+			searchedTracks = await searchYouTube(searchedText);
+			break;
+		case SongProvider.YouTubeMusic:
+			searchedTracks = await youtubeMusic.search(searchedText);
+			break;
+		default:
+			LiveConsole.outputLine.update(
+				"Could not search, unknown provider."
+			);
+			return;
+	}
+
 	let i = 0;
 	let t = "";
-	for (const track of tracks.collection) {
-		t += `${i} > ${track.title}` + "\n";
-		/*
-							LiveConsole.log("-------------- " + i + " -------------- ");
-							LiveConsole.log(`${track.title}`);
-							LiveConsole.log(`User: ${track.user.username}`);
-							LiveConsole.log(`Artist: ${track.publisher_metadata?.artist}`);
-							LiveConsole.log(
-								`Writer/Composer: ${track.publisher_metadata?.writer_composer}`
-							);
-							LiveConsole.log(`URL: ${track.permalink_url}`);
-							*/
+	for (const track of searchedTracks.slice(0, 5)) {
+		t += `${i} > ${track.username} - ${track.title}` + "\n";
 		i++;
 	}
 	t += "-------------------------------\n";
 	t +=
-		`Found ${tracks.collection.length} tracks in ${Math.round(
+		`Found ${searchedTracks.length} tracks in ${Math.round(
 			performance.now() - start
 		)}ms` + "\n";
 	t += "Type the track number to download it.\nType anything else to cancel.";
 	LiveConsole.outputLine.update(t);
 }
 
-async function searchYouTubeMusic(text: string) {
-	outputLineOccupied = true;
-	LiveConsole.outputLine.update("Searching YouTube Music songs: " + text);
-	const start = performance.now();
-
-	const results = await youtubeMusic.search(text);
-	searchedTracks = results;
-
-	let i = 0;
-	let t = "";
-	for (const song of results) {
-		t += i + " > " + song.artist + " - " + song.name + "\n";
-		i++;
-	}
-
-	t +=
-		`Found ${results.length} tracks in ${Math.round(
-			performance.now() - start
-		)}ms` + "\n";
-	t += "Type the track number to download it.\nType anything else to cancel.";
-	LiveConsole.outputLine.update(t);
-}
-
-async function searchYouTube(text: string) {
-	outputLineOccupied = true;
-	LiveConsole.outputLine.update("Searching YouTube songs: " + text);
-	const start = performance.now();
-
-	const results = await searchYouTube2(text).then((r) => r.slice(0, 5));
-	searchedTracks = results;
-
-	let i = 0;
-	let t = "";
-	for (const song of results) {
-		t += i + " > " + song.owner + " - " + song.title + "\n";
-		i++;
-	}
-
-	t +=
-		`Found ${results.length} tracks in ${Math.round(
-			performance.now() - start
-		)}ms` + "\n";
-	t += "Type the track number to download it.\nType anything else to cancel.";
-	LiveConsole.outputLine.update(t);
-}
-
-async function searchYouTube2(query: string) {
+async function searchYouTube(query: string): Promise<Track[]> {
 	const key = await youtubeMusic.getKey();
 	const json: any = await fetch(
 		`https://www.youtube.com/youtubei/v1/search?key=${key}&prettyPrint=false`,
@@ -385,5 +356,14 @@ async function searchYouTube2(query: string) {
 
 			return { title, owner, id, url: "https://youtu.be/" + id };
 		})
-		.filter((a) => a);
+		.filter((a) => a)
+		.map(
+			(song) =>
+				new Track(
+					song.url,
+					song.title,
+					song.owner,
+					SongProvider.YouTube
+				)
+		);
 }
