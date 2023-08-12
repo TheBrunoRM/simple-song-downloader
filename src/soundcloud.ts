@@ -183,10 +183,23 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 		return;
 	}
 
-	// Getting the URL from the track format selected from the list
-	const progressiveURL = formats.find(
+	// Select the progressive format from the list
+	const mediaFormat = formats.find(
 		(m) => m["format"]["protocol"] == "progressive"
-	)?.url;
+	);
+
+	if (!mediaFormat) {
+		song.failed = true;
+		LiveConsole.log("Could not find the progressive media format!");
+		return;
+	}
+
+	if (mediaFormat.snipped)
+		LiveConsole.log(
+			"Warning: the track is snipped to 30 seconds only! This is usually caused by the track being blocked in the country."
+		);
+
+	const progressiveURL = mediaFormat.url;
 	log(progressiveURL);
 
 	// Track metadata
