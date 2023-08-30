@@ -12,7 +12,11 @@ If the downloaded file is a YouTube video or playlist, it will convert the downl
 The app *should* download and extract FFmpeg automatically in case it is not added to the PATH.\
 SoundCloud provides files in mp3 format, so a conversion is not needed in that case.
 
-## How to build it yourself
+## How to use it
+
+Download the app from the ["Releases" page](https://github.com/TheBrunoRM/simple-song-downloader/releases/) and run it.
+
+## How to run it from the source code
 
 1) Download the repository or clone it using git
 2) Download and install [Node.js](https://nodejs.org/) (if you haven't already)
