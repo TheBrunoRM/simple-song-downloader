@@ -1,10 +1,10 @@
 class ConsoleLine {
 	text: string = "";
 
-	update(newText: string) {
+	update(newText: string, moveDown = true) {
 		this.text = newText;
 		const i = LiveConsole.lines.indexOf(this);
-		if (i > -1) {
+		if (moveDown && i > -1) {
 			// if this line is on the list
 			// remove it and add it at the end
 			// to show it last

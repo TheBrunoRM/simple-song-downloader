@@ -117,9 +117,10 @@ function processQueue() {
 
 		if (song.failed) {
 			song.updateLine(
-				`Failed, retrying later (${
-					song.download_tries + song.process_tries
-				} failed attempts)`
+				song.lineText +
+					`\nFailed, retrying later (${
+						song.download_tries + song.process_tries
+					} failed attempts)`
 			);
 			song.working = false;
 			song.failed = false;

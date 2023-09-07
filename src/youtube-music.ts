@@ -144,6 +144,14 @@ async function search(query: string): Promise<Track[]> {
 							"MUSIC_PAGE_TYPE_ARTIST"
 					) || subtitleTexts[0]
 				)?.text,
+				album:
+					subtitleTexts.find(
+						(r) =>
+							r.navigationEndpoint?.browseEndpoint
+								.browseEndpointContextSupportedConfigs
+								.browseEndpointContextMusicConfig.pageType ==
+							"MUSIC_PAGE_TYPE_ALBUM"
+					)?.text || null,
 			};
 		});
 
@@ -153,7 +161,8 @@ async function search(query: string): Promise<Track[]> {
 				song.url,
 				song.name,
 				song.artist,
-				SongProvider.YouTubeMusic
+				SongProvider.YouTubeMusic,
+				song.album
 			)
 	);
 }

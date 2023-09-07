@@ -75,6 +75,7 @@ export async function searchSongs(
 	limit: number = 5
 ): Promise<Track[]> {
 	const json = await searchTracks(query, limit);
+	if (!json) return [];
 	const tracks = json.collection;
 	return tracks.map(
 		(track) =>
@@ -100,6 +101,7 @@ export async function searchTracks(query: string, limit: number = 5) {
 		console.error(data.status + ": " + data.statusText);
 		if (data.status == 401) {
 			cachedClientID = null;
+			fs.unlinkSync(cached_clientid_filename);
 			console.warn("Deleted client id from cache, as it is invalid.");
 		}
 		return null;
@@ -152,6 +154,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 
 		if (data.status == 401) {
 			cachedClientID = null;
+			fs.unlinkSync(cached_clientid_filename);
 			console.warn("Deleted client id from cache, as it is invalid.");
 		}
 

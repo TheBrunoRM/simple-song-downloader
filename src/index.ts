@@ -1,6 +1,6 @@
 import downloader from "./downloader";
 import { download, searchSongs, searchTracks } from "./soundcloud";
-import fs from "fs";
+import fs, { write } from "fs";
 import youtubeMusic from "./youtube-music";
 import readline, { Key } from "readline";
 import fetch from "node-fetch";
@@ -11,6 +11,7 @@ import ffmpeg from "fluent-ffmpeg";
 import path from "path";
 import { SongProvider } from "./song";
 import { Track } from "./track";
+import moment from "moment";
 
 let searchedTracks: Track[] = null;
 let selectingProvider = false;
@@ -44,7 +45,7 @@ async function main() {
 	}
 
 	if (!fs.existsSync(configFilePath)) {
-		fs.writeFileSync(configFilePath, "{}");
+		fs.writeFileSync(configFilePath, "{\nupdate: true\n}");
 
 		// this will never log since the config file didn't exist
 		log("Config file created");
@@ -54,6 +55,8 @@ async function main() {
 
 	const ffmpegPath = config.ffmpegPath;
 	if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
+
+	if (config.update !== false) checkForUpdates();
 
 	addSongsFromQueueFile();
 
@@ -206,7 +209,37 @@ process.on("uncaughtException", (e) => {
 });
 
 export function writeErrorStack(text: string) {
-	fs.writeFileSync("./errors", text);
+	const date = moment().format("MMMM Do YYYY, h:mm:ss A");
+	fs.appendFileSync("./errors.txt", "\n\n" + date + "\n\n" + text);
+}
+
+async function checkForUpdates() {
+	const line = LiveConsole.log("Checking for updates...");
+	const data = await fetch(
+		`https://api.github.com/repos/TheBrunoRM/simple-song-downloader/releases/latest`
+	)
+		.then((d) => d.json())
+		.catch((e: Error) => {
+			line.update(
+				`Could not check for updates (${e.name}): ${e.message}`,
+				false
+			);
+			writeErrorStack(e.stack);
+			return null;
+		});
+	if (!data) return;
+	let ver = data.tag_name;
+	if (ver.indexOf("v") >= 0) ver = ver.split("v")[1].trim();
+	if (process.env.npm_package_version == ver) {
+		line.update(`You have the latest version! (${ver})`, false);
+	} else {
+		line.update(
+			`There is an update available!\n${data.assets
+				.map((a) => a.browser_download_url)
+				.join("\n")}`,
+			false
+		);
+	}
 }
 
 function addSongsFromQueueFile() {
@@ -253,7 +286,10 @@ async function searchTracksFromProvider(
 	let i = 0;
 	let t = "";
 	for (const track of searchedTracks.slice(0, 5)) {
-		t += `${i} > ${track.username} - ${track.title}` + "\n";
+		t += `${i} > `;
+		const album = track.album ? `[${track.album}] ` : null;
+		if (album) t += album;
+		t += `${track.username} - ${track.title}` + "\n";
 		i++;
 	}
 	t += "-------------------------------\n";

@@ -75,7 +75,8 @@ export async function download(song: Song) {
 	});
 	if (info == null || error) {
 		song.failed = true;
-		song.updateLine("Could not get info: " + url + "\n" + error.stack);
+		song.updateLine("Could not get info from YouTube.");
+		if (error) song.updateLine(`${song.lineText} Error logged in file.`);
 		return;
 	}
 	song.youtubeMetadata = info.videoDetails;
@@ -176,16 +177,13 @@ export async function download(song: Song) {
 			timeout();
 		});
 
-		let lastAnnounce = 0;
 		downloaded.on("progress", async (_len, cur, tot) => {
-			//if (Date.now() < lastAnnounce + 5000) return;
 			const per = (cur / tot) * 100;
 			song.updateLine(
-				`Download of ${info.videoDetails.title}: ${
-					per.toFixed(2) + "%"
-				} (${parseMB(cur)}MB / ${parseMB(tot)}MB)`
+				`${per.toFixed(2) + "%"} (${parseMB(cur)}MB / ${parseMB(
+					tot
+				)}MB)`
 			);
-			lastAnnounce = Date.now();
 		});
 
 		downloaded.on("end", () => {
@@ -197,6 +195,7 @@ export async function download(song: Song) {
 	song.downloading = false;
 	if (cancelled) {
 		song.failed = true;
+		song.updateLine("Download cancelled/yielded.");
 		return;
 	}
 
