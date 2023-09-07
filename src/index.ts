@@ -1,6 +1,7 @@
 import downloader from "./downloader";
 import { download, searchSongs, searchTracks } from "./soundcloud";
 import fs, { write } from "fs";
+import cp from "child_process";
 import youtubeMusic from "./youtube-music";
 import readline, { Key } from "readline";
 import fetch from "node-fetch";
@@ -93,7 +94,14 @@ async function main() {
 			selectingProvider = false;
 			//process.stdin.setRawMode(false);
 			LiveConsole.inputLine.text = "";
-			return processText(key.name);
+
+			if (SongProvider[selectedProvider]) {
+				searchTracksFromProvider(searchedText, selectedProvider);
+				searchedText = null;
+				selectedProvider = null;
+			}
+
+			return;
 		}
 
 		if (key.name == "return") {
@@ -131,11 +139,17 @@ async function main() {
 	});
 }
 
-function processText(text: string) {
+function executeCommand(text: string) {
 	switch (text.trim().toLowerCase()) {
 		case "download_ffmpeg":
 			processer.downloadFfmpeg();
-			return;
+			return true;
+		case "force":
+			downloader.processQueue();
+			return true;
+		case "folder":
+			cp.exec(`start "" "${AppDataFolder}"`);
+			return true;
 		case "queue":
 			const queue = downloader.getQueue();
 			LiveConsole.outputLine.update(
@@ -144,13 +158,14 @@ function processText(text: string) {
 					.concat(`Current queue: ${queue.length} songs`)
 					.join("\n")
 			);
-			return;
+			return true;
 	}
+	return false;
+}
 
-	if (SongProvider[selectedProvider]) {
-		searchTracksFromProvider(searchedText, selectedProvider);
-		searchedText = null;
-		selectedProvider = null;
+function processText(text: string) {
+	if (executeCommand(text)) {
+		LiveConsole.inputLine.update("");
 		return;
 	}
 
