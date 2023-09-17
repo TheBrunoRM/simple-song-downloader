@@ -18,14 +18,34 @@ let searchedTracks: Track[] = null;
 let selectingProvider = false;
 let selectedProvider: SongProvider = null;
 let searchedText = null;
+let lastSuggestionResultFetch = null;
+let cursorX = 0;
+
+let typingText = "";
+let selectedSuggestion = 0;
 
 export const log = (...t) => {
 	if (!config?.debug) return;
 	for (const a of t) LiveConsole.log(a.toString());
 };
-export let config;
+
+class ConfigurationStructure {
+	identation: number = 2;
+	debug: boolean = false;
+	suggestRate: number = 1000;
+	update: boolean = true;
+	ffmpegPath: string;
+	suggestionColor: number = 36;
+	defaultColor: number = 0;
+}
+
+const defaultConfig = new ConfigurationStructure();
+export let config: ConfigurationStructure = defaultConfig;
 export const saveConfig = () =>
-	fs.writeFileSync(configFilePath, Buffer.from(JSON.stringify(config)));
+	fs.writeFileSync(
+		configFilePath,
+		Buffer.from(JSON.stringify(config, null, config.identation))
+	);
 export let outputLineOccupied = false;
 
 const AppData =
@@ -35,6 +55,7 @@ const AppData =
 		: process.env.HOME + "/.local/share");
 const AppDataFolder = path.join(AppData, require("../package.json").name);
 const configFilePath = path.join(AppDataFolder, "config.json");
+const errorsFilePath = path.join(AppDataFolder, "errors.txt");
 
 async function main() {
 	console.clear();
@@ -42,17 +63,31 @@ async function main() {
 
 	if (!fs.existsSync(AppDataFolder)) {
 		fs.mkdirSync(AppDataFolder);
-		log("App data folder created");
 	}
 
 	if (!fs.existsSync(configFilePath)) {
-		fs.writeFileSync(configFilePath, "{\nupdate: true\n}");
-
-		// this will never log since the config file didn't exist
-		log("Config file created");
+		fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig));
 	}
 
-	config = JSON.parse(fs.readFileSync(configFilePath).toString());
+	try {
+		config = JSON.parse(fs.readFileSync(configFilePath).toString());
+	} catch (e) {
+		LiveConsole.asyncLog(
+			"Warning: could not read config. Using default values!"
+		).then((line) => setTimeout(() => line.remove(), 5000));
+		fs.renameSync(
+			configFilePath,
+			path.join(AppDataFolder, "config_old.json")
+		);
+		config = defaultConfig;
+	}
+
+	const keys = Object.keys(config);
+	for (const key of Object.keys(defaultConfig))
+		if (!keys.includes(key)) {
+			config[key] = defaultConfig[key];
+		}
+	saveConfig();
 
 	const ffmpegPath = config.ffmpegPath;
 	if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
@@ -69,6 +104,7 @@ async function main() {
 	readline.emitKeypressEvents(process.stdin);
 
 	process.stdin.on("keypress", (str: string, key: Key) => {
+		clearTimeout(suggestTimeout);
 		if (selectingProvider) {
 			switch (key.name) {
 				case "s":
@@ -93,7 +129,7 @@ async function main() {
 			}
 			selectingProvider = false;
 			//process.stdin.setRawMode(false);
-			LiveConsole.inputLine.text = "";
+			LiveConsole.inputLine.update("");
 
 			if (SongProvider[selectedProvider]) {
 				searchTracksFromProvider(searchedText, selectedProvider);
@@ -105,66 +141,170 @@ async function main() {
 		}
 
 		if (key.name == "return") {
-			processText(LiveConsole.inputLine.text);
-			LiveConsole.inputLine.text = "";
+			if (!showingSuggestions) processText(LiveConsole.inputLine.text);
+			else processText(suggestions[selectedSuggestion]);
+			typingText = "";
+			LiveConsole.inputLine.update("");
 			return;
 		}
-		let newText = LiveConsole.inputLine.text;
-		if (key.name == "backspace")
-			newText = newText.substring(0, newText.length - 1);
-		else newText += str;
-		LiveConsole.inputLine.update(newText);
-		LiveConsole.render();
+
+		if (key.name == "escape") {
+			LiveConsole.inputLine.update(typingText);
+			return;
+		}
+
+		if (showingSuggestions) {
+			if (key.name == "up" || key.name == "down") {
+				if (key.name == "up") selectedSuggestion--;
+				if (key.name == "down") selectedSuggestion++;
+				selectedSuggestion = Math.max(
+					0,
+					Math.min(suggestions.length - 1, selectedSuggestion)
+				);
+				updateSuggestionDisplay();
+				return;
+			}
+		}
+
+		let newText = typingText;
+		if (key.name == "backspace") {
+			cursorX = Math.max(0, cursorX - 1);
+			typingText =
+				newText.substring(0, cursorX) +
+				newText.substring(cursorX + 1, newText.length);
+		} else if (str) {
+			typingText =
+				newText.substring(0, cursorX) +
+				str +
+				newText.substring(cursorX, newText.length);
+			cursorX += str.length;
+		}
+		LiveConsole.inputLine.update(typingText);
+		showingSuggestions = false;
+		fetchAndShowSearchSuggestions(typingText);
 
 		if (key.name == "c" && key.ctrl) {
 			LiveConsole.log("CTRL-C called, see you next time!");
 			process.exit();
 		}
 	});
+}
 
-	process.stdin.addListener("data", async (data) => {
-		//if (data.compare(Buffer.from("0d0a", "hex")) == 0) return;
+let suggestTimeout: NodeJS.Timeout;
+let suggesting = false;
+let showingSuggestions = false;
+let suggestions = [];
+
+function updateSuggestionDisplay() {
+	showingSuggestions = true;
+	LiveConsole.inputLine.update(
+		"(Use the arrow keys to navigate)\n" +
+			suggestions
+				.map((s, i) => s + (selectedSuggestion == i ? " <<<" : ""))
+				.join("\n")
+	);
+}
+
+async function fetchAndShowSearchSuggestions(original) {
+	if (selectingProvider || searchedTracks || !original) return;
+	const suggestRate = config.suggestRate;
+	if (Object.keys(commands).includes(original)) {
+		if (suggestTimeout) clearTimeout(suggestTimeout);
 		return;
-		if (!data) return;
-		let text;
-		try {
-			text = data.toString()?.trim();
-		} catch (e) {
-			LiveConsole.log("Couldn't parse string!");
-			LiveConsole.log(e);
-			return;
+	}
+	if (suggesting) return;
+	const now = performance.now();
+	if (!lastSuggestionResultFetch) lastSuggestionResultFetch = now;
+	const elapsed = now - lastSuggestionResultFetch;
+	if (elapsed < suggestRate) {
+		if (suggestTimeout) clearTimeout(suggestTimeout);
+		suggestTimeout = setTimeout(
+			() => fetchAndShowSearchSuggestions(original),
+			suggestRate - elapsed
+		);
+		return;
+	}
+	suggesting = true;
+	lastSuggestionResultFetch = now;
+	const data = await fetch(
+		`https://music.youtube.com/youtubei/v1/music/get_search_suggestions?key=${youtubeMusic.getKey()}&prettyPrint=false`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				context: youtubeMusic.getContext(),
+				input: original,
+			}),
 		}
-		if (!text) return;
-		processText(text);
-	});
+	).then((d) => d.json());
+	suggesting = false;
+
+	const contents = data["contents"];
+	if (!contents) return;
+	// in "contents", "1" are the text results and "2" are channels and other stuff
+	const sugs = contents[0]["searchSuggestionsSectionRenderer"][
+		"contents"
+	].map((s) => s["searchSuggestionRenderer"]);
+
+	if (lastSuggestionResultFetch === now) {
+		suggestions = sugs.map((s) =>
+			s["suggestion"]["runs"]
+				.filter((r) => r.text)
+				.map((r) =>
+					r.bold
+						? `${r.text}`
+						: `\x1b[${config.suggestionColor}m${r.text}\x1b[${config.defaultColor}m`
+				)
+				.join("")
+		);
+		updateSuggestionDisplay();
+	}
 }
 
-function executeCommand(text: string) {
-	switch (text.trim().toLowerCase()) {
-		case "download_ffmpeg":
-			processer.downloadFfmpeg();
-			return true;
-		case "force":
-			downloader.processQueue();
-			return true;
-		case "folder":
-			cp.exec(`start "" "${AppDataFolder}"`);
-			return true;
-		case "queue":
-			const queue = downloader.getQueue();
-			LiveConsole.outputLine.update(
-				queue
-					.map((song) => song.getDisplay())
-					.concat(`Current queue: ${queue.length} songs`)
-					.join("\n")
-			);
-			return true;
-	}
-	return false;
-}
+const commands = {
+	download_ffmpeg: () => processer.downloadFfmpeg(),
+	force: () => downloader.processQueue(),
+	folder: () => {
+		cp.exec(`start "" "${AppDataFolder}"`);
+		return "Opened application folder!";
+	},
+	config: () => {
+		const npp = "C:\\Program Files\\Notepad++\\notepad++.exe";
+		const editorPath = fs.existsSync(npp)
+			? npp
+			: "C:\\Windows\\notepad.exe";
+		cp.spawnSync(editorPath, [path.join(configFilePath)]);
+		return "Opened configuration file!";
+	},
+	queue: () => {
+		const queue = downloader.getQueue();
+		LiveConsole.outputLine.update(
+			queue
+				.map((song) => song.getDisplay())
+				.concat(`Current queue: ${queue.length} songs`)
+				.join("\n")
+		);
+		return true;
+	},
+	help: () => {
+		const names = Object.keys(commands);
+		return `Command list (${names.length}): ${names.join(", ")}`;
+	},
+};
 
 function processText(text: string) {
-	if (executeCommand(text)) {
+	const cmd = commands[text];
+	if (cmd) {
+		const exec = cmd();
+		LiveConsole.outputLine.append(
+			"\n" +
+				((
+					typeof exec == "object"
+						? JSON.stringify(exec, null, 2)
+						: exec
+				)
+					? exec.toString()
+					: "Executed command: " + text)
+		);
 		LiveConsole.inputLine.update("");
 		return;
 	}
@@ -204,8 +344,10 @@ function processText(text: string) {
 		} catch (e) {
 			searchedText = text;
 			LiveConsole.outputLine.update(
-				"Select provider: SoundCloud [s] | YouTube [y] | YouTube Music [m]"
+				`Select the provider to search: ${searchedText}\n` +
+					"Press the corresponding key: SoundCloud [s] | YouTube [y] | YouTube Music [m]"
 			);
+			typingText = "";
 			LiveConsole.inputLine.update("");
 			selectingProvider = true;
 			//process.stdin.setRawMode(true);
@@ -225,7 +367,7 @@ process.on("uncaughtException", (e) => {
 
 export function writeErrorStack(text: string) {
 	const date = moment().format("MMMM Do YYYY, h:mm:ss A");
-	fs.appendFileSync("./errors.txt", "\n\n" + date + "\n\n" + text);
+	fs.appendFileSync(errorsFilePath, "\n\n" + date + "\n\n" + text);
 }
 
 async function checkForUpdates() {
@@ -281,21 +423,26 @@ async function searchTracksFromProvider(
 	);
 	const start = performance.now();
 
-	switch (selectedProvider) {
-		case SongProvider.SoundCloud:
-			searchedTracks = await searchSongs(searchedText);
-			break;
-		case SongProvider.YouTube:
-			searchedTracks = await searchYouTube(searchedText);
-			break;
-		case SongProvider.YouTubeMusic:
-			searchedTracks = await youtubeMusic.search(searchedText);
-			break;
-		default:
-			LiveConsole.outputLine.update(
-				"Could not search, unknown provider."
-			);
-			return;
+	try {
+		switch (selectedProvider) {
+			case SongProvider.SoundCloud:
+				searchedTracks = await searchSongs(searchedText);
+				break;
+			case SongProvider.YouTube:
+				searchedTracks = await searchYouTube(searchedText);
+				break;
+			case SongProvider.YouTubeMusic:
+				searchedTracks = await youtubeMusic.search(searchedText);
+				break;
+			default:
+				LiveConsole.outputLine.update(
+					"Could not search, unknown provider."
+				);
+				return;
+		}
+	} catch (e) {
+		LiveConsole.outputLine.update("Could not search: " + e.message);
+		writeErrorStack(e.stack);
 	}
 
 	let i = 0;

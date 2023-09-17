@@ -18,6 +18,10 @@ class ConsoleLine {
 		LiveConsole.render();
 	}
 
+	append(newText: string, moveDown = true) {
+		this.update(this.text + newText, moveDown);
+	}
+
 	constructor(text: string) {
 		this.update(text);
 	}
