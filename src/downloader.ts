@@ -8,6 +8,7 @@ import path from "path";
 import fs from "fs";
 import { log, outputLineOccupied } from "./index";
 import LiveConsole from "./liveconsole";
+import Locale from "./locale";
 
 const queue: Song[] = [];
 
@@ -133,16 +134,18 @@ function processQueue() {
 		if (song.downloaded) {
 			if (song.processed || song.provider == SongProvider.SoundCloud) {
 				if (song.processed)
-					song.updateLine("Sucessfully downloaded and processed.");
+					song.updateLine(
+						Locale.get("DOWNLOADER.DOWNLOADED_PROCESSED")
+					);
 				else if (song.provider == SongProvider.SoundCloud)
-					song.updateLine("Sucessfully downloaded.");
+					song.updateLine(Locale.get("DOWNLOADER.DOWNLOADED"));
 
 				// remove song from queue
 				queue.splice(queue.indexOf(song), 1);
 				continue;
 			}
 			if (song.process_tries >= 3) {
-				song.updateLine("Could not process.");
+				song.updateLine(Locale.get("DOWNLOADER.PROCESS_ERROR"));
 				if (!fs.existsSync("failed_list.txt"))
 					fs.writeFileSync("failed_list.txt", "");
 				fs.appendFileSync(
@@ -152,7 +155,7 @@ function processQueue() {
 				queue.splice(queue.indexOf(song), 1);
 				continue;
 			}
-			song.updateLine("In queue to process...");
+			song.updateLine(Locale.get("DOWNLOADER.PROCESS_WAITING"));
 			processer.queuer.add(song);
 			continue;
 		}
@@ -160,7 +163,7 @@ function processQueue() {
 		if (song.working) continue;
 
 		if (!song.downloading) {
-			song.updateLine("Waiting to download...");
+			song.updateLine(Locale.get("DOWNLOADER.DOWNLOAD_WAITING"));
 			switch (song.provider) {
 				case SongProvider.YouTube:
 					youtube.queuer.add(song);
@@ -169,7 +172,11 @@ function processQueue() {
 					soundcloud.queuer.add(song);
 					break;
 				default:
-					song.updateLine("Unknown song provider: " + song.provider);
+					song.updateLine(
+						Locale.get("PROVIDER.UNKNOWN", {
+							provider: song.provider,
+						})
+					);
 					continue;
 			}
 			song.working = true;
@@ -184,9 +191,7 @@ function processQueue() {
 
 	UpdateListFile();
 	if (queue.length <= 0 && !outputLineOccupied)
-		LiveConsole.outputLine.update(
-			"The queue is empty. Waiting for input..."
-		);
+		LiveConsole.outputLine.update(Locale.get("QUEUE_EMPTY"));
 }
 
 const getQueue = () => queue;

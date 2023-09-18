@@ -23,7 +23,7 @@ async function main() {
 	}
 
 	const build = exe({
-		entry: "./dist/index.js",
+		entry: "./dist/package.json",
 		out: `./bin/build/${APP_NAME}.exe`,
 		//pkg: ["-C", "GZip"], // Specify extra pkg arguments
 		version,

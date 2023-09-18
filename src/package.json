@@ -1,0 +1,14 @@
+{
+	"bin": "index.js",
+	"pkg": {
+		"targets": [
+			"latest-win-x64"
+		],
+		"scripts": [
+			"*.js"
+		],
+		"assets": [
+			"**"
+		]
+	}
+}

@@ -1,44 +1,13 @@
 import ytdl, { downloadOptions, videoFormat, videoInfo } from "ytdl-core";
-
 import "dotenv/config";
-import ffmpeg, { FfmpegCommand } from "fluent-ffmpeg";
-
 import fs from "fs";
 import path from "path";
 import { Readable } from "node:stream";
 import Queuer from "./queuer";
 import { Song } from "./song";
 import { setTimeout } from "timers/promises";
-import { log, writeErrorStack } from "./index";
+import { AppDataFolder, config, log, writeErrorStack } from "./index";
 import LiveConsole from "./liveconsole";
-
-const MAX_CONTENT_LENGTH = 1024 * 1024 * 16;
-const DOWNLOAD_PATH = "downloaded";
-const DOWNLOADS_FOLDER = path.join(process.cwd(), DOWNLOAD_PATH);
-
-const OPTIONS: downloadOptions = {
-	quality: "highestaudio",
-	filter: "audioonly",
-	highWaterMark: MAX_CONTENT_LENGTH,
-	requestOptions: {
-		headers: {
-			Cookie: process.env.COOKIE || "",
-		},
-	},
-};
-
-function updateConsole(message?: string) {
-	/*
-	const text =
-		`Current download task: ${currentDownload ? "yes" : "no"}\n` +
-		`Current process task: ${currentProcessing ? "yes" : "no"}\n` +
-		`Currently getting information for ${gettingInfos.length} videos.\n` +
-		`${message ? message + "\n" : ""}`;
-	process.stdout.clearLine(0);
-	process.stdout.cursorTo(0, 0);
-	process.stdout.write(text);
-	*/
-}
 
 function parseMB(bytes: number) {
 	return (bytes / 1024 / 1024).toFixed(2);
@@ -65,10 +34,6 @@ export async function download(song: Song) {
 	log("getting info for: " + url);
 	let error = null;
 	const info: videoInfo = await ytdl.getInfo(url).catch((e) => {
-		/*
-		console.warn(`Error getting info for ${url}`);
-		console.error(e);
-		*/
 		writeErrorStack(e.stack);
 		error = e;
 		return null;
@@ -82,7 +47,7 @@ export async function download(song: Song) {
 	song.youtubeMetadata = info.videoDetails;
 
 	const format = ytdl.chooseFormat(info.formats, {
-		quality: OPTIONS.quality,
+		quality: config.quality,
 		filter: (f) => f.hasAudio && !f.hasVideo,
 	});
 
@@ -93,8 +58,10 @@ export async function download(song: Song) {
 		"-"
 	);
 
+	const downloadsFolder = path.join(AppDataFolder, config.downloadsFolder);
+
 	const downloadPath = path.join(
-		DOWNLOADS_FOLDER,
+		downloadsFolder,
 		"ogg",
 		parentFolder,
 		fileName + ".ogg"
@@ -107,7 +74,7 @@ export async function download(song: Song) {
 	log("content length: " + format.contentLength);
 
 	const finalFilePath = path.join(
-		DOWNLOADS_FOLDER,
+		downloadsFolder,
 		parentFolder,
 		fileName + ".mp3"
 	);
@@ -123,7 +90,14 @@ export async function download(song: Song) {
 	}
 
 	let options: downloadOptions = {
-		...OPTIONS,
+		quality: config.quality,
+		filter: config.filter,
+		highWaterMark: config.MAX_CONTENT_LENGTH,
+		requestOptions: {
+			headers: {
+				Cookie: process.env.COOKIE || "",
+			},
+		},
 		range: {
 			start: bytesWritten.length,
 			end: parseInt(format.contentLength),

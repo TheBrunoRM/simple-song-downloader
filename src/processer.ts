@@ -2,6 +2,7 @@ import ffmpeg from "fluent-ffmpeg";
 import Queuer from "./queuer";
 import { Song } from "./song";
 import fs from "fs";
+import path from "path";
 import fetch from "node-fetch";
 import { log, writeErrorStack } from "./index";
 import LiveConsole from "./liveconsole";
@@ -101,22 +102,31 @@ function parseMB(bytes: number) {
 	return (bytes / 1024 / 1024).toFixed(2);
 }
 
+const ffmpegPrefix = "[FFmpeg] ";
+
 async function downloadFfmpeg() {
-	const prefix = "[FFmpeg] ";
-	const msg = LiveConsole.log(prefix + "Starting download...");
+	const ffmpegDownloadPath = "./ffmpeg.zip";
+	const ffmpegFinalPath = "./ffmpeg/";
+
+	const msg = LiveConsole.log(ffmpegPrefix + "Starting download...");
 	const res = await fetch(
 		`https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-lgpl-shared.zip`
 	);
 	const contentLength = +res.headers.get("Content-Length");
 	let receivedBytes = 0;
 	const chunks = [];
-	const stream = fs.openSync("./ffmpeg.zip", "a");
+	if (fs.existsSync(ffmpegDownloadPath))
+		fs.renameSync(
+			ffmpegDownloadPath,
+			`./ffmpeg_old_${performance.now()}.zip`
+		);
+	const stream = fs.openSync(ffmpegDownloadPath, "a");
 	await new Promise<void>((resolve, reject) => {
 		res.body.on("data", (chunk) => {
 			chunks.push(chunk);
 			receivedBytes += chunk.length;
 			msg.update(
-				prefix +
+				ffmpegPrefix +
 					"Downloading... " +
 					`${parseMB(receivedBytes)}MB / ${parseMB(contentLength)}MB`
 			);
@@ -130,21 +140,25 @@ async function downloadFfmpeg() {
 			resolve();
 		});
 	});
-	let buffer = new Uint8Array(receivedBytes); // (4.1)
+	let buffer = new Uint8Array(receivedBytes);
 	let position = 0;
 	for (let chunk of chunks) {
-		buffer.set(chunk, position); // (4.2)
+		buffer.set(chunk, position);
 		position += chunk.length;
 	}
-	msg.update(prefix + "Downloaded, extracting...");
-	const zip = new AdmZip("./ffmpeg.zip");
-	zip.extractAllTo("./ffmpeg/");
-	const ffmpegPath =
-		"./ffmpeg/ffmpeg-master-latest-win64-lgpl-shared/bin/ffmpeg.exe";
+	msg.update(ffmpegPrefix + "Downloaded, extracting...");
+	const zip = AdmZip(ffmpegDownloadPath);
+	zip.extractAllTo(ffmpegFinalPath);
+	const ffmpegPath = path.join(
+		ffmpegFinalPath,
+		"/ffmpeg-master-latest-win64-lgpl-shared/bin/ffmpeg.exe"
+	);
 	ffmpeg.setFfmpegPath(ffmpegPath);
 	config.ffmpegPath = ffmpegPath;
 	saveConfig();
 	msg.update(
-		prefix + "Installation completed, FFmpeg path set to " + ffmpegPath
+		ffmpegPrefix +
+			"Installation completed, FFmpeg path set to " +
+			ffmpegPath
 	);
 }

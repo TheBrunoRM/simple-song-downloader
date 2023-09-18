@@ -13,16 +13,22 @@ import path from "path";
 import { SongProvider } from "./song";
 import { Track } from "./track";
 import moment from "moment";
+import Locale from "./locale";
+import { ChooseFormatQuality, Filter } from "ytdl-core";
 
 let searchedTracks: Track[] = null;
 let selectingProvider = false;
 let selectedProvider: SongProvider = null;
 let searchedText = null;
-let lastSuggestionResultFetch = null;
 let cursorX = 0;
-
 let typingText = "";
+
 let selectedSuggestion = 0;
+let lastSuggestionResultFetch = null;
+let suggestTimeout: NodeJS.Timeout;
+let fetchingSuggestions = false;
+let shouldShowSuggestions = false;
+let suggestions = [];
 
 export const log = (...t) => {
 	if (!config?.debug) return;
@@ -37,6 +43,12 @@ class ConfigurationStructure {
 	ffmpegPath: string;
 	suggestionColor: number = 36;
 	defaultColor: number = 0;
+	language: string = Locale.DEFAULT_LANGUAGE;
+	MAX_CONTENT_LENGTH: number = 1024 * 1024 * 16;
+	quality: ChooseFormatQuality = "highestaudio";
+	filter: Filter = "audioonly";
+	downloadsFolder: string = "downloads";
+	suggestionsEnabled: boolean = true;
 }
 
 const defaultConfig = new ConfigurationStructure();
@@ -53,13 +65,15 @@ const AppData =
 	(process.platform == "darwin"
 		? process.env.HOME + "/Library/Preferences"
 		: process.env.HOME + "/.local/share");
-const AppDataFolder = path.join(AppData, require("../package.json").name);
+export const AppDataFolder = path.join(
+	AppData,
+	require("../package.json").name
+);
 const configFilePath = path.join(AppDataFolder, "config.json");
 const errorsFilePath = path.join(AppDataFolder, "errors.txt");
 
 async function main() {
 	console.clear();
-	process.title = "Simple Song Downloader";
 
 	if (!fs.existsSync(AppDataFolder)) {
 		fs.mkdirSync(AppDataFolder);
@@ -89,16 +103,18 @@ async function main() {
 		}
 	saveConfig();
 
+	Locale.load();
+	Locale.setLanguage(config.language);
+	process.title = Locale.get("APP_NAME");
+
 	const ffmpegPath = config.ffmpegPath;
 	if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
 
-	if (config.update !== false) checkForUpdates();
+	if (config.update) checkForUpdates();
 
 	addSongsFromQueueFile();
 
-	LiveConsole.outputLine.update(
-		"Type the name of the song you want to download:"
-	);
+	LiveConsole.outputLine.update(Locale.get("TYPE_INPUT"));
 
 	process.stdin.setRawMode(true);
 	readline.emitKeypressEvents(process.stdin);
@@ -109,26 +125,31 @@ async function main() {
 			switch (key.name) {
 				case "s":
 					selectedProvider = SongProvider.SoundCloud;
-					LiveConsole.outputLine.update("Selected SoundCloud");
 					break;
 				case "y":
 					selectedProvider = SongProvider.YouTube;
-					LiveConsole.outputLine.update("Selected YouTube");
 					break;
 				case "m":
 					selectedProvider = SongProvider.YouTubeMusic;
-					LiveConsole.outputLine.update("Selected YouTube Music");
 					break;
 				default:
 					selectedProvider = null;
-					LiveConsole.outputLine.update(
-						"Invalid provider, operation cancelled.\n" +
-							"Type the name of the song you want to download:"
-					);
 					break;
 			}
+			if (!selectedProvider) {
+				LiveConsole.outputLine.update(
+					Locale.get("PROVIDER.INVALID_CANCELLED") +
+						"\n" +
+						Locale.get("TYPE_INPUT")
+				);
+			} else {
+				LiveConsole.outputLine.update(
+					Locale.get("PROVIDER.SELECTED", {
+						provider: selectedProvider,
+					})
+				);
+			}
 			selectingProvider = false;
-			//process.stdin.setRawMode(false);
 			LiveConsole.inputLine.update("");
 
 			if (SongProvider[selectedProvider]) {
@@ -141,8 +162,9 @@ async function main() {
 		}
 
 		if (key.name == "return") {
-			if (!showingSuggestions) processText(LiveConsole.inputLine.text);
+			if (!shouldShowSuggestions) processText(LiveConsole.inputLine.text);
 			else processText(suggestions[selectedSuggestion]);
+			clearSuggestions();
 			typingText = "";
 			LiveConsole.inputLine.update("");
 			return;
@@ -153,7 +175,7 @@ async function main() {
 			return;
 		}
 
-		if (showingSuggestions) {
+		if (config.suggestionsEnabled && shouldShowSuggestions) {
 			if (key.name == "up" || key.name == "down") {
 				if (key.name == "up") selectedSuggestion--;
 				if (key.name == "down") selectedSuggestion++;
@@ -180,7 +202,7 @@ async function main() {
 			cursorX += str.length;
 		}
 		LiveConsole.inputLine.update(typingText);
-		showingSuggestions = false;
+		shouldShowSuggestions = false;
 		fetchAndShowSearchSuggestions(typingText);
 
 		if (key.name == "c" && key.ctrl) {
@@ -190,15 +212,15 @@ async function main() {
 	});
 }
 
-let suggestTimeout: NodeJS.Timeout;
-let suggesting = false;
-let showingSuggestions = false;
-let suggestions = [];
+function clearSuggestions() {
+	shouldShowSuggestions = false;
+	suggestions = [];
+	if (suggestTimeout) clearTimeout(suggestTimeout);
+}
 
 function updateSuggestionDisplay() {
-	showingSuggestions = true;
 	LiveConsole.inputLine.update(
-		"(Use the arrow keys to navigate)\n" +
+		`(${Locale.get("ARROWS_NAVIGATE")})\n` +
 			suggestions
 				.map((s, i) => s + (selectedSuggestion == i ? " <<<" : ""))
 				.join("\n")
@@ -206,13 +228,19 @@ function updateSuggestionDisplay() {
 }
 
 async function fetchAndShowSearchSuggestions(original) {
-	if (selectingProvider || searchedTracks || !original) return;
+	if (
+		!config.suggestionsEnabled ||
+		selectingProvider ||
+		searchedTracks ||
+		!original
+	)
+		return;
 	const suggestRate = config.suggestRate;
 	if (Object.keys(commands).includes(original)) {
-		if (suggestTimeout) clearTimeout(suggestTimeout);
+		clearSuggestions();
 		return;
 	}
-	if (suggesting) return;
+	if (fetchingSuggestions) return;
 	const now = performance.now();
 	if (!lastSuggestionResultFetch) lastSuggestionResultFetch = now;
 	const elapsed = now - lastSuggestionResultFetch;
@@ -224,7 +252,7 @@ async function fetchAndShowSearchSuggestions(original) {
 		);
 		return;
 	}
-	suggesting = true;
+	fetchingSuggestions = true;
 	lastSuggestionResultFetch = now;
 	const data = await fetch(
 		`https://music.youtube.com/youtubei/v1/music/get_search_suggestions?key=${youtubeMusic.getKey()}&prettyPrint=false`,
@@ -236,7 +264,7 @@ async function fetchAndShowSearchSuggestions(original) {
 			}),
 		}
 	).then((d) => d.json());
-	suggesting = false;
+	fetchingSuggestions = false;
 
 	const contents = data["contents"];
 	if (!contents) return;
@@ -245,7 +273,11 @@ async function fetchAndShowSearchSuggestions(original) {
 		"contents"
 	].map((s) => s["searchSuggestionRenderer"]);
 
-	if (lastSuggestionResultFetch === now) {
+	if (
+		lastSuggestionResultFetch === now &&
+		LiveConsole.inputLine.text == original
+	) {
+		shouldShowSuggestions = true;
 		suggestions = sugs.map((s) =>
 			s["suggestion"]["runs"]
 				.filter((r) => r.text)
@@ -265,7 +297,7 @@ const commands = {
 	force: () => downloader.processQueue(),
 	folder: () => {
 		cp.exec(`start "" "${AppDataFolder}"`);
-		return "Opened application folder!";
+		return Locale.get("OPENED_APP_FOLDER");
 	},
 	config: () => {
 		const npp = "C:\\Program Files\\Notepad++\\notepad++.exe";
@@ -273,21 +305,31 @@ const commands = {
 			? npp
 			: "C:\\Windows\\notepad.exe";
 		cp.spawnSync(editorPath, [path.join(configFilePath)]);
-		return "Opened configuration file!";
+		return Locale.get("OPENED_CONFIG_FILE");
 	},
 	queue: () => {
 		const queue = downloader.getQueue();
 		LiveConsole.outputLine.update(
 			queue
 				.map((song) => song.getDisplay())
-				.concat(`Current queue: ${queue.length} songs`)
+				.concat(`${Locale.get("CURRENT_QUEUE")}: ${queue.length} songs`)
 				.join("\n")
 		);
 		return true;
 	},
 	help: () => {
 		const names = Object.keys(commands);
-		return `Command list (${names.length}): ${names.join(", ")}`;
+		return (
+			`${Locale.get("COMMAND_LIST")} (${names.length}):\n` +
+			names
+				.map(
+					(name) =>
+						`${name}: ${Locale.get(
+							`COMMANDS.${name.toUpperCase()}`
+						)}`
+				)
+				.join("\n")
+		);
 	},
 };
 
@@ -303,7 +345,7 @@ function processText(text: string) {
 						: exec
 				)
 					? exec.toString()
-					: "Executed command: " + text)
+					: Locale.get("EXECUTED_COMMAND") + ": " + text)
 		);
 		LiveConsole.inputLine.update("");
 		return;
@@ -344,8 +386,15 @@ function processText(text: string) {
 		} catch (e) {
 			searchedText = text;
 			LiveConsole.outputLine.update(
-				`Select the provider to search: ${searchedText}\n` +
-					"Press the corresponding key: SoundCloud [s] | YouTube [y] | YouTube Music [m]"
+				[
+					`${Locale.get("SELECT_PROVIDER", {
+						search: searchedText,
+					})}`,
+					`${Locale.get("PRESS_CORRESPONDING_KEY", {
+						providers:
+							"SoundCloud [s] | YouTube [y] | YouTube Music [m]",
+					})}`,
+				].join("\n")
 			);
 			typingText = "";
 			LiveConsole.inputLine.update("");
@@ -371,7 +420,7 @@ export function writeErrorStack(text: string) {
 }
 
 async function checkForUpdates() {
-	const line = LiveConsole.log("Checking for updates...");
+	const line = LiveConsole.log(Locale.get("UPDATE.CHECK"));
 	const data = await fetch(
 		`https://api.github.com/repos/TheBrunoRM/simple-song-downloader/releases/latest`
 	)
@@ -384,16 +433,45 @@ async function checkForUpdates() {
 			writeErrorStack(e.stack);
 			return null;
 		});
-	if (!data) return;
-	let ver = data.tag_name;
-	if (ver.indexOf("v") >= 0) ver = ver.split("v")[1].trim();
-	if (process.env.npm_package_version == ver) {
-		line.update(`You have the latest version! (${ver})`, false);
-	} else {
+	if (!data) return line.update(Locale.get("UPDATE.CHECK_FAILED"));
+	const current_ver = require("../package.json").version;
+	let latest_ver = data.tag_name;
+	if (latest_ver.indexOf("v") >= 0)
+		latest_ver = latest_ver.split("v")[1].trim();
+	const remver = latest_ver.split(".");
+	const locver = current_ver.split(".");
+	let update = 0;
+	for (let i = 0; i < locver.length; i++) {
+		const locint = locver[i];
+		const remint = remver[i];
+		if (parseInt(locint) > parseInt(remint)) {
+			update = -1;
+			break;
+		} else if (parseInt(remint) > parseInt(locint)) {
+			update = 1;
+			break;
+		}
+	}
+
+	if (update == 0) {
 		line.update(
-			`There is an update available!\n${data.assets
+			`${Locale.get("UPDATE.LATEST")} (${current_ver} == ${latest_ver})`,
+			false
+		);
+	} else if (update > 0) {
+		line.update(
+			`${Locale.get(
+				"UPDATE.AVAILABLE"
+			)} (${current_ver} => ${latest_ver})\n${data.assets
 				.map((a) => a.browser_download_url)
 				.join("\n")}`,
+			false
+		);
+	} else {
+		line.update(
+			`${Locale.get(
+				"UPDATE.DEVBUILD"
+			)} (${current_ver} <= ${latest_ver})`,
 			false
 		);
 	}

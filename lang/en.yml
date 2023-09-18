@@ -1,0 +1,42 @@
+APP_NAME: "Simple Song Downloader"
+TYPE_INPUT: "Type the name of the song you want to download, or type 'help' to see the help menu."
+ARROWS_NAVIGATE: "Use the arrows to navigate"
+
+COMMANDS:
+  DOWNLOAD_FFMPEG: "Downloads FFmpeg"
+  FORCE: "Forces the queue to be processed"
+  FOLDER: "Opens the application data folder"
+  CONFIG: "Opens the configuration file"
+  QUEUE: "Display the songs in the queue"
+  HELP: "Displays the help menu"
+
+OPENED_CONFIG_FILE: "Opened configuration file!"
+OPENED_APP_FOLDER: "Opened application folder!"
+CURRENT_QUEUE: "Current queue"
+COMMAND_LIST: "Command list"
+
+SELECT_PROVIDER: "Select provider: {search}"
+PRESS_CORRESPONDING_KEY: "Press the corresponding key: {providers}"
+
+EXECUTED_COMMAND: "Executed command"
+
+UPDATE:
+  CHECK: "Checking for updates..."
+  CHECK_FAILED: "Update check failed."
+  LATEST: "You have the latest version!"
+  AVAILABLE: "There is an update available!"
+  DEVBUILD: "This is a development build!"
+
+PROVIDER:
+  SELECTED: "Selected provider: {provider}"
+  INVALID_CANCELLED: "Invalid provider, operation cancelled."
+  UNKNOWN: "Unknown song provider: {provider}"
+
+QUEUE_EMPTY: "The queue is empty. Waiting for input..."
+
+DOWNLOADER:
+  DOWNLOADED_PROCESSED: "Successfully downloaded and processed."
+  DOWNLOADED: "Successfully downloaded."
+  PROCESS_ERROR: "Could not process."
+  PROCESS_WAITING: "Initializing process..."
+  DOWNLOAD_WAITING: "Initializing download..."

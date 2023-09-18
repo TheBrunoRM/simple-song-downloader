@@ -1,0 +1,42 @@
+APP_NAME: "Simple Descargador de Canciones"
+TYPE_INPUT: "Escribe el nombre de la canción que quieres descargar, o escribe 'help' para ver el menú de ayuda."
+ARROWS_NAVIGATE: "Usa las flechas del teclado para navegar"
+
+COMMANDS:
+  DOWNLOAD_FFMPEG: "Descarga FFmpeg."
+  FORCE: "Fuerza que la cola sea procesada."
+  FOLDER: "Abre la carpeta de la aplicación."
+  CONFIG: "Abre el archivo de configuración."
+  QUEUE: "Muestra las canciones en la cola."
+  HELP: "Muestra el menú de ayuda."
+
+OPENED_CONFIG_FILE: "¡Se ha abierto el archivo de configuración!"
+OPENED_APP_FOLDER: "¡Se ha abierto la carpeta de la aplicación!"
+CURRENT_QUEUE: "Cola actual"
+COMMAND_LIST: "Lista de comandos"
+
+SELECT_PROVIDER: "Selecciona el proveedor: {search}"
+PRESS_CORRESPONDING_KEY: "Presiona la tecla correspondiente: {providers}"
+
+EXECUTED_COMMAND: "Comando ejecutado"
+
+UPDATE:
+  CHECK: "Comprobando actualizaciones..."
+  CHECK_FAILED: "No se ha podido comprobar actualizaciones."
+  LATEST: "¡Tienes la última versión!"
+  AVAILABLE: "¡Hay una actualización disponible!"
+  DEVBUILD: "¡Esta es una versión de desarrollo!"
+
+PROVIDER:
+  SELECTED: "Se ha seleccionado el proveedor: {provider}"
+  INVALID_CANCELLED: "El proveedor es inválido, se ha cancelado la operación."
+  UNKNOWN: "Proveedor desconocido: {provider}"
+
+QUEUE_EMPTY: "La cola está vacía. Esperando entrada del usuario..."
+
+DOWNLOADER:
+  DOWNLOADED_PROCESSED: "Descarga finalizada y procesada."
+  DOWNLOADED: "Descarga completada."
+  PROCESS_ERROR: "No se ha podido procesar."
+  PROCESS_WAITING: "Procesando..."
+  DOWNLOAD_WAITING: "Inicializando descarga..."
