@@ -6,12 +6,14 @@ import { Readable } from "node:stream";
 import Queuer from "./queuer";
 import { Song } from "./song";
 import { setTimeout } from "timers/promises";
-import { AppDataFolder, config, log, writeErrorStack } from "./index";
+import {
+	AppDataFolder,
+	config,
+	formatProgress,
+	log,
+	writeErrorStack,
+} from "./index";
 import LiveConsole from "./liveconsole";
-
-function parseMB(bytes: number) {
-	return (bytes / 1024 / 1024).toFixed(2);
-}
 
 function truncateName(str: string, max = 200) {
 	if (str.trim().length <= max) return str.trim();
@@ -146,11 +148,7 @@ export async function download(song: Song) {
 
 		downloaded.on("progress", async (_len, cur, tot) => {
 			const per = (cur / tot) * 100;
-			song.updateLine(
-				`${per.toFixed(2) + "%"} (${parseMB(cur)}MB / ${parseMB(
-					tot
-				)}MB)`
-			);
+			song.updateLine(formatProgress(per, cur, tot));
 		});
 
 		downloaded.on("end", () => {

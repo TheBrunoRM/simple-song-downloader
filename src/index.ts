@@ -98,9 +98,9 @@ function loadConfiguration() {
 	try {
 		config = JSON.parse(fs.readFileSync(configFilePath).toString());
 	} catch (e) {
-		LiveConsole.asyncLog(
+		LiveConsole.log(
 			"Warning: could not read config. Using default values!"
-		).then((line) => setTimeout(() => line.remove(), 5000));
+		);
 		fs.renameSync(
 			configFilePath,
 			path.join(AppDataFolder, "config_old.json")
@@ -151,6 +151,25 @@ function loadCredentials() {
 		if (value) credentials[key] = value;
 	}
 }
+
+/**
+ *
+ * @param bytes the number of bytes
+ * @returns the number of megabytes
+ */
+export function parseMB(bytes: number, decimals: number = 2) {
+	return (bytes / 1024 / 1024).toFixed(decimals);
+}
+
+/**
+ *
+ * @param per percentage float from 0 to 100
+ * @param cur current downloaded bytese
+ * @param tot total bytes
+ * @returns the provided data as a string
+ */
+export const formatProgress = (per, cur, tot) =>
+	`${per.toFixed(2) + "%"} (${parseMB(cur)}MB / ${parseMB(tot)}MB)`;
 
 let credline;
 async function main() {
@@ -233,7 +252,8 @@ async function main() {
 		}
 
 		if (key.name == "return") {
-			if (!typingText || !LiveConsole.inputLine.text) return;
+			if (!searchedTracks && (!typingText || !LiveConsole.inputLine.text))
+				return;
 			if (!shouldShowSuggestions) processText(LiveConsole.inputLine.text);
 			else processText(suggestions[selectedSuggestion]);
 			clearSuggestions();
@@ -600,6 +620,16 @@ async function searchTracksFromProvider(
 	} catch (e) {
 		LiveConsole.outputLine.update("Could not search: " + e.message);
 		writeErrorStack(e.stack);
+	}
+
+	if (!searchedTracks) {
+		LiveConsole.outputLine.update("Could not search tracks.");
+		return;
+	}
+
+	if (searchedTracks.length <= 0) {
+		LiveConsole.outputLine.update("Could not find any tracks.");
+		return;
 	}
 
 	let i = 0;

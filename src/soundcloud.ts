@@ -87,8 +87,11 @@ export async function searchTracks(query: string, limit: number = 5) {
 		console.error("Could not fetch SoundCloud tracks for search: " + query);
 		console.error(data.status + ": " + data.statusText);
 		if (data.status == 401) {
-			credentials.soundcloud_client_id = null;
-			console.warn("Deleted client id from cache, as it is invalid.");
+			const newID = await fetchClientID();
+			if (newID && credentials.soundcloud_client_id != newID) {
+				credentials.soundcloud_client_id = newID;
+				return searchTracks(query, limit);
+			}
 		}
 		return null;
 	}
@@ -117,7 +120,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 
 	if (!url) {
 		song.failed = true;
-		console.error("No URL provided!");
+		song.updateLine("No URL provided!");
 		return;
 	}
 
@@ -125,7 +128,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 	const clientID = await getClientID();
 	if (clientID == null) {
 		song.failed = true;
-		LiveConsole.log("Could not get soundcloud client ID!");
+		song.updateLine("Could not get soundcloud client ID!");
 		return;
 	}
 
@@ -136,11 +139,16 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 
 	if (!data.ok) {
 		song.failed = true;
-		LiveConsole.log("Could not get track information!");
+		song.updateLine(
+			`Could not get track information! (status ${data.status})`
+		);
 
 		if (data.status == 401) {
-			credentials.soundcloud_client_id = null;
-			console.warn("Deleted client id from cache, as it is invalid.");
+			const newID = await fetchClientID();
+			if (credentials.soundcloud_client_id != newID) {
+				credentials.soundcloud_client_id == newID;
+				return download(song);
+			}
 		}
 
 		return;
@@ -150,7 +158,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 
 	if (!info) {
 		song.failed = true;
-		LiveConsole.log("Could not get track information!");
+		song.updateLine("Could not get track information!");
 		return;
 	}
 
@@ -158,7 +166,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 	const track_authorization = info["track_authorization"];
 	if (!track_authorization) {
 		song.failed = true;
-		LiveConsole.log("Could not get the track authorization!");
+		song.updateLine("Could not get the track authorization!");
 		return;
 	}
 
@@ -167,7 +175,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 
 	if (formats.length <= 0) {
 		song.failed = true;
-		LiveConsole.log("Could not get the media types from the track!");
+		song.updateLine("Could not get the media types from the track!");
 		return;
 	}
 
@@ -178,7 +186,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 
 	if (!mediaFormat) {
 		song.failed = true;
-		LiveConsole.log("Could not find the progressive media format!");
+		song.updateLine("Could not find the progressive media format!");
 		return;
 	}
 
@@ -257,7 +265,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 	// Do not download if it is already downloaded
 	if (length > 0 && bytesAlreadyWritten >= length) {
 		song.downloaded = true;
-		LiveConsole.log("The file is completely downloaded!");
+		song.updateLine("The file is completely downloaded!");
 		return;
 	}
 
@@ -269,8 +277,8 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 			writtenBytes += data;
 			if (config.debug) {
 				if (parseInt(length) > 0)
-					log(`progress: ${(writtenBytes / length) * 100}%`);
-				else log(`written ${writtenBytes} bytes`);
+					song.updateLine(`${(writtenBytes / length) * 100}% ()`);
+				else song.updateLine(`written ${writtenBytes} bytes`);
 			}
 			fs.writeSync(file, data);
 		});
@@ -279,7 +287,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 		stream.on("end", () => {
 			song.downloading = false;
 			song.downloaded = true;
-			log("finished downloading the file: " + finalPath);
+			song.updateLine("finished downloading the file: " + finalPath);
 			resolve(metadata);
 		});
 	});
