@@ -35,6 +35,8 @@ export const log = (...t) => {
 	for (const a of t) LiveConsole.log(a.toString());
 };
 
+const stripText = (text) => text.replace(/\x1b\[\d+m/g, "");
+
 class ConfigurationStructure {
 	identation: number = 2;
 	debug: boolean = false;
@@ -91,7 +93,9 @@ export function saveCredentials() {
 			.map((a) => `${a}:${credentials[a]}`)
 			.join("\n")
 	);
-	credline.update("saved credentials\n" + JSON.stringify(credentials));
+	LiveConsole.outputLine.append(
+		"\nsaved credentials\n" + JSON.stringify(credentials)
+	);
 }
 
 function loadConfiguration() {
@@ -171,7 +175,6 @@ export function parseMB(bytes: number, decimals: number = 2) {
 export const formatProgress = (per, cur, tot) =>
 	`${per.toFixed(2) + "%"} (${parseMB(cur)}MB / ${parseMB(tot)}MB)`;
 
-let credline;
 async function main() {
 	console.clear();
 
@@ -188,9 +191,6 @@ async function main() {
 	}
 
 	loadCredentials();
-	credline = LiveConsole.log(
-		"your credentials:\n" + JSON.stringify(credentials) + "\n----------"
-	);
 	loadConfiguration();
 
 	Locale.load();
@@ -255,15 +255,11 @@ async function main() {
 			if (!searchedTracks && (!typingText || !LiveConsole.inputLine.text))
 				return;
 			if (!shouldShowSuggestions) processText(LiveConsole.inputLine.text);
-			else processText(suggestions[selectedSuggestion]);
+			else processText(stripText(suggestions[selectedSuggestion]));
 			clearSuggestions();
+			cursorX = 0;
 			typingText = "";
 			LiveConsole.inputLine.update("");
-			return;
-		}
-
-		if (key.name == "escape") {
-			LiveConsole.inputLine.update(typingText);
 			return;
 		}
 
@@ -280,22 +276,31 @@ async function main() {
 			}
 		}
 
-		let newText = typingText;
-		if (key.name == "backspace") {
+		let currentText = stripText(typingText);
+		if (key.name == "escape") {
+			LiveConsole.inputLine.update(typingText);
+			return;
+		} else if (key.name == "tab") {
+			typingText = stripText(suggestions[selectedSuggestion]);
+			LiveConsole.inputLine.update(typingText);
+			cursorX = LiveConsole.inputLine.text.length;
+			return;
+		} else if (key.name == "backspace") {
 			cursorX = Math.max(0, cursorX - 1);
 			typingText =
-				newText.substring(0, cursorX) +
-				newText.substring(cursorX + 1, newText.length);
+				currentText.substring(0, cursorX) +
+				currentText.substring(cursorX + 1, currentText.length);
 		} else if (str) {
 			typingText =
-				newText.substring(0, cursorX) +
+				currentText.substring(0, cursorX) +
 				str +
-				newText.substring(cursorX, newText.length);
+				currentText.substring(cursorX, currentText.length);
 			cursorX += str.length;
 		}
 		LiveConsole.inputLine.update(typingText);
 		shouldShowSuggestions = false;
 		fetchAndShowSearchSuggestions(typingText);
+		typingText = stripText(typingText);
 
 		if (key.name == "c" && key.ctrl) {
 			LiveConsole.log("CTRL-C called, see you next time!");
@@ -427,6 +432,10 @@ const commands = {
 				)
 				.join("\n")
 		);
+	},
+
+	credentials: () => {
+		return JSON.stringify(credentials, null, 4);
 	},
 };
 
