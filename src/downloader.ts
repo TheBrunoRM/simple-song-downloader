@@ -6,11 +6,12 @@ import processer from "./processer";
 import ytpl from "ytpl";
 import path from "path";
 import fs from "fs";
-import { log, outputLineOccupied } from "./index";
+import { log, outputLineOccupied, queueListFile } from "./index";
 import LiveConsole from "./liveconsole";
 import Locale from "./locale";
 
 const queue: Song[] = [];
+export const downloaded: Song[] = [];
 
 function parseProvider(_url: string | URL) {
 	let url;
@@ -76,19 +77,14 @@ const SONG_DISPLAY_FORMAT_IN_SONG_LIST_FILE = (song) =>
 	`${song.url} - ${song.getDisplay()}`;
 
 function UpdateListFile() {
-	if (!fs.existsSync("queue_list.txt"))
-		fs.writeFileSync("queue_list.txt", "");
-	fs.truncateSync("queue_list.txt", 0);
-	fs.appendFileSync(
-		"queue_list.txt",
-		queue.map((song) => song.url).join("\n")
-	);
+	if (!fs.existsSync(queueListFile)) fs.writeFileSync(queueListFile, "");
+	fs.truncateSync(queueListFile, 0);
+	fs.appendFileSync(queueListFile, queue.map((song) => song.url).join("\n"));
 }
 
 function processQueue() {
-	if (!fs.existsSync("queue_list.txt"))
-		fs.writeFileSync("queue_list.txt", "");
-	const listfile = fs.readFileSync("queue_list.txt").toString().split("\n");
+	if (!fs.existsSync(queueListFile)) fs.writeFileSync(queueListFile, "");
+	const listfile = fs.readFileSync(queueListFile).toString().split("\n");
 
 	const filtered = queue.filter(
 		(song) => !song.downloading && !song.processing
@@ -102,7 +98,7 @@ function processQueue() {
 	// instead of the copy
 	for (const song of [...queue]) {
 		if (!listfile.includes(song.url))
-			fs.appendFileSync("queue_list.txt", "\n" + song.url);
+			fs.appendFileSync(queueListFile, "\n" + song.url);
 
 		if (song.download_tries > 5) {
 			song.updateLine("Failed too many times, added to failed list.");
@@ -140,8 +136,11 @@ function processQueue() {
 				else if (song.provider == SongProvider.SoundCloud)
 					song.updateLine(Locale.get("DOWNLOADER.DOWNLOADED"));
 
+				song.line.append(" " + Locale.get("CHECK_FOLDER"));
+
 				// remove song from queue
 				queue.splice(queue.indexOf(song), 1);
+				downloaded.unshift(song);
 				continue;
 			}
 			if (song.process_tries >= 3) {
@@ -163,23 +162,27 @@ function processQueue() {
 		if (song.working) continue;
 
 		if (!song.downloading) {
-			song.updateLine(Locale.get("DOWNLOADER.DOWNLOAD_WAITING"));
-			switch (song.provider) {
-				case SongProvider.YouTube:
-					youtube.queuer.add(song);
-					break;
-				case SongProvider.SoundCloud:
-					soundcloud.queuer.add(song);
-					break;
-				default:
-					song.updateLine(
-						Locale.get("PROVIDER.UNKNOWN", {
-							provider: song.provider,
-						})
-					);
-					continue;
+			try {
+				switch (song.provider) {
+					case SongProvider.YouTube:
+						youtube.queuer.add(song);
+						break;
+					case SongProvider.SoundCloud:
+						soundcloud.queuer.add(song);
+						break;
+					default:
+						song.updateLine(
+							Locale.get("PROVIDER.UNKNOWN", {
+								provider: song.provider,
+							})
+						);
+						continue;
+				}
+				song.working = true;
+				song.updateLine(Locale.get("DOWNLOADER.DOWNLOAD_WAITING"));
+			} catch (e) {
+				song.updateLine(Locale.get("DOWNLOADER.ERROR"));
 			}
-			song.working = true;
 		} else {
 			// skip songs that are already being worked on
 			if (song.downloading || song.processing) continue;

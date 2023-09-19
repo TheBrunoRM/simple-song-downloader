@@ -1,11 +1,12 @@
 import fetch from "node-fetch";
 import { SongProvider } from "./song";
 import { Track } from "./track";
-
-let cachedKey = null;
+import { credentials, saveCredentials } from ".";
+import LiveConsole from "./liveconsole";
 
 async function getKey() {
-	if (cachedKey) return cachedKey;
+	if (credentials.youtube_cookie) return credentials.youtube_cookie;
+	LiveConsole.log("Fetching youtube cookie!");
 	const res = await fetch("https://music.youtube.com/sw.js_data", {
 		headers: {
 			accept: "*/*",
@@ -23,12 +24,13 @@ async function getKey() {
 	});
 	const text = await res.text();
 	const json = JSON.parse(text.substring(4));
-	cachedKey = json[0][2][1];
-	return cachedKey;
+	credentials.youtube_cookie = json[0][2][1];
+	saveCredentials();
+	return credentials.youtube_cookie;
 }
 
 async function getCookie() {
-	return process.env.YOUTUBE_COOKIE;
+	return "";
 }
 
 function getContext() {
@@ -94,7 +96,7 @@ async function getHeaders() {
 		"x-youtube-bootstrap-logged-in": "false",
 		"x-youtube-client-name": "67",
 		"x-youtube-client-version": "1.20230712.01.00",
-		cookie: (await getCookie()) || "",
+		cookie: await getCookie(),
 		Referer: "https://music.youtube.com/",
 		"Referrer-Policy": "strict-origin-when-cross-origin",
 	};

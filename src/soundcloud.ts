@@ -5,7 +5,7 @@ import path from "path";
 import { Song } from "./song";
 import Queuer from "./queuer";
 import "dotenv/config";
-import { config, log } from "./index";
+import { config, credentials, log, saveCredentials } from "./index";
 import LiveConsole from "./liveconsole";
 import { Track } from "./track";
 
@@ -19,10 +19,8 @@ export class SoundCloudTrackMetadata {
 	}
 }
 
-let cachedClientID = process.env.SOUNDCLOUD_CLIENT_ID;
-
 /**
- * This method fetches the client ID by sending a request to the Soundclod webpage
+ * This method fetches the client ID by sending a request to the Soundcloud webpage
  * and then gets the client ID by fetching the scripts and searching for it on the files.
  * @returns the client ID.
  */
@@ -51,23 +49,12 @@ async function fetchClientID() {
 	return final_client_id;
 }
 
-const cached_clientid_filename = "soundcloud_clientid";
-
 async function getClientID(): Promise<string> {
-	if (!cachedClientID) {
-		if (fs.existsSync(cached_clientid_filename)) {
-			log("Reading SoundCloud client ID from file");
-			cachedClientID = fs
-				.readFileSync(cached_clientid_filename)
-				.toString();
-		} else {
-			cachedClientID = await fetchClientID();
-			//fs.truncateSync(cached_clientid_filename, 0);
-			fs.writeFileSync(cached_clientid_filename, cachedClientID);
-			log("Saved SoundCloud client ID to file");
-		}
+	if (!credentials.soundcloud_client_id) {
+		credentials.soundcloud_client_id = await fetchClientID();
+		saveCredentials();
 	}
-	return cachedClientID;
+	return credentials.soundcloud_client_id;
 }
 
 export async function searchSongs(
@@ -100,8 +87,7 @@ export async function searchTracks(query: string, limit: number = 5) {
 		console.error("Could not fetch SoundCloud tracks for search: " + query);
 		console.error(data.status + ": " + data.statusText);
 		if (data.status == 401) {
-			cachedClientID = null;
-			fs.unlinkSync(cached_clientid_filename);
+			credentials.soundcloud_client_id = null;
 			console.warn("Deleted client id from cache, as it is invalid.");
 		}
 		return null;
@@ -153,8 +139,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 		LiveConsole.log("Could not get track information!");
 
 		if (data.status == 401) {
-			cachedClientID = null;
-			fs.unlinkSync(cached_clientid_filename);
+			credentials.soundcloud_client_id = null;
 			console.warn("Deleted client id from cache, as it is invalid.");
 		}
 
@@ -215,8 +200,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 
 	// The final file path where the data will be written
 	let finalPath = path.join(
-		process.cwd(),
-		"downloaded-soundcloud",
+		config.soundcloudDownloads,
 		`${username} - ${title}` + ".mp3"
 	);
 

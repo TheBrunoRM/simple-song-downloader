@@ -59,7 +59,7 @@ class LiveConsole extends null {
 		}
 
 		if (this.outputLine?.text) text += this.outputLine.text + "\n";
-		if (this.inputLine?.text) text += this.inputLine.text;
+		text += "> " + (this.inputLine?.text || "");
 
 		process.stdout.write(
 			text.split("\n").slice(-process.stdout.rows).join("\n")

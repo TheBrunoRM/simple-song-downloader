@@ -4,7 +4,7 @@ import { Song } from "./song";
 import fs from "fs";
 import path from "path";
 import fetch from "node-fetch";
-import { log, writeErrorStack } from "./index";
+import { AppDataFolder, log, writeErrorStack } from "./index";
 import LiveConsole from "./liveconsole";
 
 let ffmpegNotFound = false;
@@ -105,8 +105,8 @@ function parseMB(bytes: number) {
 const ffmpegPrefix = "[FFmpeg] ";
 
 async function downloadFfmpeg() {
-	const ffmpegDownloadPath = "./ffmpeg.zip";
-	const ffmpegFinalPath = "./ffmpeg/";
+	const ffmpegDownloadPath = path.join(AppDataFolder, "ffmpeg.zip");
+	const ffmpegFinalPath = path.join(AppDataFolder, "/ffmpeg/");
 
 	const msg = LiveConsole.log(ffmpegPrefix + "Starting download...");
 	const res = await fetch(
@@ -118,7 +118,7 @@ async function downloadFfmpeg() {
 	if (fs.existsSync(ffmpegDownloadPath))
 		fs.renameSync(
 			ffmpegDownloadPath,
-			`./ffmpeg_old_${performance.now()}.zip`
+			path.join(AppDataFolder, `ffmpeg_old_${performance.now()}.zip`)
 		);
 	const stream = fs.openSync(ffmpegDownloadPath, "a");
 	await new Promise<void>((resolve, reject) => {
@@ -156,9 +156,6 @@ async function downloadFfmpeg() {
 	ffmpeg.setFfmpegPath(ffmpegPath);
 	config.ffmpegPath = ffmpegPath;
 	saveConfig();
-	msg.update(
-		ffmpegPrefix +
-			"Installation completed, FFmpeg path set to " +
-			ffmpegPath
-	);
+	msg.update(ffmpegPrefix + "Installation completed");
+	msg.append("\n" + ffmpegPrefix + "Path set to: " + ffmpegPath);
 }

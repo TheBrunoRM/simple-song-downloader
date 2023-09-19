@@ -1,4 +1,4 @@
-import downloader from "./downloader";
+import downloader, { downloaded } from "./downloader";
 import { download, searchSongs, searchTracks } from "./soundcloud";
 import fs, { write } from "fs";
 import cp from "child_process";
@@ -47,8 +47,14 @@ class ConfigurationStructure {
 	MAX_CONTENT_LENGTH: number = 1024 * 1024 * 16;
 	quality: ChooseFormatQuality = "highestaudio";
 	filter: Filter = "audioonly";
-	downloadsFolder: string = "downloads";
+	youtubeDownloads: string = "./downloads";
+	soundcloudDownloads: string = "./downloads-soundcloud";
 	suggestionsEnabled: boolean = true;
+}
+
+class Credentials {
+	soundcloud_client_id: string;
+	youtube_cookie: string;
 }
 
 const defaultConfig = new ConfigurationStructure();
@@ -71,18 +77,24 @@ export const AppDataFolder = path.join(
 );
 const configFilePath = path.join(AppDataFolder, "config.json");
 const errorsFilePath = path.join(AppDataFolder, "errors.txt");
+export const credentialsFilePath = path.join(
+	AppDataFolder,
+	"sensitive_credentials"
+);
 
-async function main() {
-	console.clear();
+export const credentials: Credentials = new Credentials();
 
-	if (!fs.existsSync(AppDataFolder)) {
-		fs.mkdirSync(AppDataFolder);
-	}
+export function saveCredentials() {
+	fs.writeFileSync(
+		credentialsFilePath,
+		Object.keys(credentials)
+			.map((a) => `${a}:${credentials[a]}`)
+			.join("\n")
+	);
+	credline.update("saved credentials\n" + JSON.stringify(credentials));
+}
 
-	if (!fs.existsSync(configFilePath)) {
-		fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig));
-	}
-
+function loadConfiguration() {
 	try {
 		config = JSON.parse(fs.readFileSync(configFilePath).toString());
 	} catch (e) {
@@ -96,12 +108,71 @@ async function main() {
 		config = defaultConfig;
 	}
 
+	// add missing keys
 	const keys = Object.keys(config);
 	for (const key of Object.keys(defaultConfig))
 		if (!keys.includes(key)) {
 			config[key] = defaultConfig[key];
 		}
+
+	// fix paths
+	if (!path.isAbsolute(config.youtubeDownloads))
+		config.youtubeDownloads = path.join(
+			AppDataFolder,
+			config.youtubeDownloads
+		);
+	if (!path.isAbsolute(config.soundcloudDownloads))
+		config.soundcloudDownloads = path.join(
+			AppDataFolder,
+			config.soundcloudDownloads
+		);
+
 	saveConfig();
+}
+
+function loadCredentials() {
+	for (const line of fs
+		.readFileSync(credentialsFilePath)
+		.toString()
+		.split("\n")) {
+		let key = "";
+		let value = null;
+		let gettingValue = false;
+		for (const char of line.split("")) {
+			if (!gettingValue) {
+				if (char === ":") {
+					value = "";
+					gettingValue = true;
+				} else key += char;
+			} else {
+				value += char;
+			}
+		}
+		if (value) credentials[key] = value;
+	}
+}
+
+let credline;
+async function main() {
+	console.clear();
+
+	if (!fs.existsSync(AppDataFolder)) {
+		fs.mkdirSync(AppDataFolder);
+	}
+
+	if (!fs.existsSync(configFilePath)) {
+		fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig));
+	}
+
+	if (!fs.existsSync(credentialsFilePath)) {
+		fs.writeFileSync(credentialsFilePath, "");
+	}
+
+	loadCredentials();
+	credline = LiveConsole.log(
+		"your credentials:\n" + JSON.stringify(credentials) + "\n----------"
+	);
+	loadConfiguration();
 
 	Locale.load();
 	Locale.setLanguage(config.language);
@@ -162,6 +233,7 @@ async function main() {
 		}
 
 		if (key.name == "return") {
+			if (!typingText || !LiveConsole.inputLine.text) return;
 			if (!shouldShowSuggestions) processText(LiveConsole.inputLine.text);
 			else processText(suggestions[selectedSuggestion]);
 			clearSuggestions();
@@ -298,6 +370,11 @@ const commands = {
 	folder: () => {
 		cp.exec(`start "" "${AppDataFolder}"`);
 		return Locale.get("OPENED_APP_FOLDER");
+	},
+	file: () => {
+		const song = downloaded[0];
+		if (!song) return "No song downloaded!";
+		cp.exec(`explorer /select, ${song.finalFilePath}"`);
 	},
 	config: () => {
 		const npp = "C:\\Program Files\\Notepad++\\notepad++.exe";
@@ -477,10 +554,12 @@ async function checkForUpdates() {
 	}
 }
 
-function addSongsFromQueueFile() {
-	if (!fs.existsSync("queue_list.txt")) return;
+export const queueListFile = path.join(AppDataFolder, "queue_list.txt");
 
-	const lines = fs.readFileSync("queue_list.txt").toString().split("\n");
+function addSongsFromQueueFile() {
+	if (!fs.existsSync(queueListFile)) return;
+
+	const lines = fs.readFileSync(queueListFile).toString().split("\n");
 	let queued = 0;
 	for (const line of lines) {
 		if (!line) continue;

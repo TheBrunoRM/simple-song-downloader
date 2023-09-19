@@ -33,6 +33,7 @@ PROVIDER:
   UNKNOWN: "Proveedor desconocido: {provider}"
 
 QUEUE_EMPTY: "La cola está vacía. Esperando entrada del usuario..."
+CHECK_FOLDER: "Type 'file' to go to the downloaded file."
 
 DOWNLOADER:
   DOWNLOADED_PROCESSED: "Descarga finalizada y procesada."
@@ -40,3 +41,4 @@ DOWNLOADER:
   PROCESS_ERROR: "No se ha podido procesar."
   PROCESS_WAITING: "Procesando..."
   DOWNLOAD_WAITING: "Inicializando descarga..."
+  ERROR: "Error"

@@ -18,13 +18,6 @@ function truncateName(str: string, max = 200) {
 	return str.slice(0, max).trim();
 }
 
-/**
- *
- * This method downloads a song from a YouTube URL
- *
- * @param url The URL that links to the YouTube video
- * @returns The downloaded file's path
- */
 export async function download(song: Song) {
 	const url: string = song.url;
 	const parentFolder: string = song.parentFolder || "";
@@ -58,7 +51,7 @@ export async function download(song: Song) {
 		"-"
 	);
 
-	const downloadsFolder = path.join(AppDataFolder, config.downloadsFolder);
+	const downloadsFolder = config.youtubeDownloads;
 
 	const downloadPath = path.join(
 		downloadsFolder,

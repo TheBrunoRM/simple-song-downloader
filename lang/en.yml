@@ -33,6 +33,7 @@ PROVIDER:
   UNKNOWN: "Unknown song provider: {provider}"
 
 QUEUE_EMPTY: "The queue is empty. Waiting for input..."
+CHECK_FOLDER: "Type 'file' to go to the downloaded file."
 
 DOWNLOADER:
   DOWNLOADED_PROCESSED: "Successfully downloaded and processed."
@@ -40,3 +41,4 @@ DOWNLOADER:
   PROCESS_ERROR: "Could not process."
   PROCESS_WAITING: "Initializing process..."
   DOWNLOAD_WAITING: "Initializing download..."
+  ERROR: "Error"

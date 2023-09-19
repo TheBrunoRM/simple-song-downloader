@@ -35,7 +35,7 @@ export class Song {
 	youtubeMetadata: MoreVideoDetails;
 	soundcloudMetadata: SoundCloudTrackMetadata;
 
-	private line = LiveConsole.log(this.getDisplay());
+	line = LiveConsole.log(this.getDisplay());
 	lineText = "";
 	updateLine(text: string) {
 		this.lineText = text;
