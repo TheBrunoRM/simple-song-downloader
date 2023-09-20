@@ -114,9 +114,17 @@ function loadConfiguration() {
 
 	// add missing keys
 	const keys = Object.keys(config);
-	for (const key of Object.keys(defaultConfig))
+	const default_keys = Object.keys(defaultConfig);
+	for (const key of default_keys)
 		if (!keys.includes(key)) {
 			config[key] = defaultConfig[key];
+		}
+
+	// remove unnecesary keys
+	for (const key of keys)
+		if (!default_keys.includes(key)) {
+			config["warning_unused_key_" + key] = config[key];
+			delete config[key];
 		}
 
 	// fix paths
@@ -406,7 +414,7 @@ const commands = {
 		const editorPath = fs.existsSync(npp)
 			? npp
 			: "C:\\Windows\\notepad.exe";
-		cp.spawnSync(editorPath, [path.join(configFilePath)]);
+		cp.spawn(editorPath, [path.join(configFilePath)]);
 		return Locale.get("OPENED_CONFIG_FILE");
 	},
 	queue: () => {
@@ -436,6 +444,11 @@ const commands = {
 
 	credentials: () => {
 		return JSON.stringify(credentials, null, 4);
+	},
+
+	reload: () => {
+		loadConfiguration();
+		return Locale.get("RELOADED_CONFIG");
 	},
 };
 
