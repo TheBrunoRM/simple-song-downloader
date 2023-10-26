@@ -6,7 +6,7 @@ import processer from "./processer";
 import ytpl from "ytpl";
 import path from "path";
 import fs from "fs";
-import { log, outputLineOccupied, queueListFile } from "./index";
+import { log, outputLineOccupied, queueListFile, quit_queued } from "./index";
 import LiveConsole from "./liveconsole";
 import Locale from "./locale";
 
@@ -193,8 +193,11 @@ function processQueue() {
 	}
 
 	UpdateListFile();
-	if (queue.length <= 0 && !outputLineOccupied)
-		LiveConsole.outputLine.update(Locale.get("QUEUE_EMPTY"));
+	if (queue.length <= 0) {
+		if (quit_queued) process.exit();
+		else if (!outputLineOccupied)
+			LiveConsole.outputLine.update(Locale.get("QUEUE_EMPTY"));
+	}
 }
 
 const getQueue = () => queue;

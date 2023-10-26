@@ -30,6 +30,8 @@ let fetchingSuggestions = false;
 let shouldShowSuggestions = false;
 let suggestions = [];
 
+export let quit_queued = false;
+
 export const log = (...t) => {
 	if (!config?.debug) return;
 	for (const a of t) LiveConsole.log(a.toString());
@@ -271,6 +273,16 @@ async function main() {
 			return;
 		}
 
+		if (key.ctrl && key.name == "c") {
+			if (downloader.getQueue().length <= 0) {
+				process.exit();
+			} else if (!quit_queued) {
+				quit_queued = true;
+				LiveConsole.log("CTRL-C called, will exit after finishing!");
+			}
+			return;
+		}
+
 		if (config.suggestionsEnabled && shouldShowSuggestions) {
 			if (key.name == "up" || key.name == "down") {
 				if (key.name == "up") selectedSuggestion--;
@@ -309,11 +321,6 @@ async function main() {
 		shouldShowSuggestions = false;
 		fetchAndShowSearchSuggestions(typingText);
 		typingText = stripText(typingText);
-
-		if (key.name == "c" && key.ctrl) {
-			LiveConsole.log("CTRL-C called, see you next time!");
-			process.exit();
-		}
 	});
 }
 
