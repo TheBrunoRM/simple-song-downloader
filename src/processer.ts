@@ -17,6 +17,7 @@ let ffmpegNotFound = false;
 export async function processSong(song: Song) {
 	const downloadPath: string = song.downloadPath;
 	const finalFilePath: string = song.finalFilePath;
+	await fs.mkdirSync(path.dirname(finalFilePath), { recursive: true });
 
 	song.process_tries++;
 
