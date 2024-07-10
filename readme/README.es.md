@@ -21,7 +21,7 @@ Descarga la aplicación desde el [apartado de "Lanzamientos"](https://github.com
 
 1. Descarga el repositorio o clónalo usando git.
 2. Descarga e instala [Node.js](https://nodejs.org/) (si es que no lo tienes ya).
-3. Instala las dependencias (una vez) usando `npm i` (o `pnpm i` si es que lo tienes instalado [pnpm](https://pnpm.io/installation#using-npm) instalado, o en su defecto usa `npm i -g pnpm`).
+3. Instala las dependencias (una vez) usando `npm i` (o `pnpm i` si es que tienes [pnpm](https://pnpm.io/installation#using-npm) instalado, o en su defecto usa `npm i -g pnpm`).
 4. Transpila la aplicación usando `npm run comp` o `npx tsc`.
 5. Ejecuta la aplicación usando `npm start`, o compílalo a un ejecutable (.exe) usando `npm run build` (el archivo resultante estará en la carpeta "bin").
 
