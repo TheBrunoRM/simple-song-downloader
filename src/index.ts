@@ -7,7 +7,7 @@ import readline, { Key } from "readline";
 import fetch from "node-fetch";
 import "source-map-support/register";
 import processer from "./processer";
-import LiveConsole from "./liveconsole";
+import LiveConsole, { ConsoleLine } from "./liveconsole";
 import ffmpeg from "fluent-ffmpeg";
 import path from "path";
 import { SongProvider } from "./song";
@@ -22,6 +22,7 @@ let selectedProvider: SongProvider = null;
 let searchedText = null;
 let cursorX = 0;
 let typingText = "";
+let selectingLanguage: ConsoleLine = null;
 
 let selectedSuggestion = 0;
 let lastSuggestionResultFetch = null;
@@ -43,7 +44,7 @@ class ConfigurationStructure {
 	identation: number = 2;
 	debug: boolean = false;
 	suggestRate: number = 1000;
-	update: boolean = true;
+	check_for_updates: boolean = true;
 	ffmpegPath: string;
 	suggestionColor: number = 36;
 	defaultColor: number = 0;
@@ -96,7 +97,10 @@ export function saveCredentials() {
 			.join("\n")
 	);
 	LiveConsole.outputLine.append(
-		"\nsaved credentials\n" + JSON.stringify(credentials)
+		"\n" +
+			Locale.get("SAVED_CREDENTIALS") +
+			"\n" +
+			JSON.stringify(credentials)
 	);
 }
 
@@ -104,9 +108,7 @@ function loadConfiguration() {
 	try {
 		config = JSON.parse(fs.readFileSync(configFilePath).toString());
 	} catch (e) {
-		LiveConsole.log(
-			"Warning: could not read config. Using default values!"
-		);
+		LiveConsole.log(Locale.get("USING_DEFAULT_CONFIG"));
 		fs.renameSync(
 			configFilePath,
 			path.join(AppDataFolder, "config_old.json")
@@ -124,8 +126,8 @@ function loadConfiguration() {
 
 	// remove unnecesary keys
 	for (const key of keys)
-		if (!default_keys.includes(key)) {
-			config["warning_unused_key_" + key] = config[key];
+		if (!key.startsWith("WARNING_UNUSED_") && !default_keys.includes(key)) {
+			config["WARNING_UNUSED_" + key] = config[key];
 			delete config[key];
 		}
 
@@ -178,43 +180,15 @@ export function parseMB(bytes: number, decimals: number = 2) {
 /**
  *
  * @param per percentage float from 0 to 100
- * @param cur current downloaded bytese
+ * @param cur current downloaded bytes
  * @param tot total bytes
  * @returns the provided data as a string
  */
-export const formatProgress = (per, cur, tot) =>
+export const formatProgress = (cur, tot, per = (cur / tot) * 100) =>
 	`${per.toFixed(2) + "%"} (${parseMB(cur)}MB / ${parseMB(tot)}MB)`;
 
 async function main() {
 	console.clear();
-
-	if (!fs.existsSync(AppDataFolder)) {
-		fs.mkdirSync(AppDataFolder);
-	}
-
-	if (!fs.existsSync(configFilePath)) {
-		fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig));
-	}
-
-	if (!fs.existsSync(credentialsFilePath)) {
-		fs.writeFileSync(credentialsFilePath, "");
-	}
-
-	loadCredentials();
-	loadConfiguration();
-
-	Locale.load();
-	Locale.setLanguage(config.language);
-	process.title = Locale.get("APP_NAME");
-
-	const ffmpegPath = config.ffmpegPath;
-	if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
-
-	if (config.update) checkForUpdates();
-
-	addSongsFromQueueFile();
-
-	LiveConsole.outputLine.update(Locale.get("TYPE_INPUT"));
 
 	process.stdin.setRawMode(true);
 	readline.emitKeypressEvents(process.stdin);
@@ -274,7 +248,7 @@ async function main() {
 		}
 
 		if (key.ctrl && key.name == "c") {
-			if (downloader.getQueue().length <= 0) {
+			if (downloader.getQueue().filter((s) => !s.failed).length <= 0) {
 				process.exit();
 			} else if (!quit_queued) {
 				quit_queued = true;
@@ -322,6 +296,48 @@ async function main() {
 		fetchAndShowSearchSuggestions(typingText);
 		typingText = stripText(typingText);
 	});
+
+	if (!fs.existsSync(AppDataFolder)) {
+		fs.mkdirSync(AppDataFolder);
+	}
+
+	if (!fs.existsSync(credentialsFilePath)) {
+		fs.writeFileSync(credentialsFilePath, "");
+	}
+
+	if (!fs.existsSync(configFilePath)) {
+		fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig));
+		selectingLanguage = LiveConsole.log(
+			"English: type 'en'\nEspañol: escribe 'es'"
+		);
+		return;
+	}
+
+	start();
+}
+
+function start() {
+	loadCredentials();
+	loadConfiguration();
+
+	Locale.setLanguage(config.language);
+	Locale.load();
+	process.title = Locale.get("APP_NAME");
+
+	const ffmpegPath = config.ffmpegPath;
+	if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
+
+	if (config.check_for_updates) checkForUpdates();
+	else
+		LiveConsole.log(
+			Locale.get("UPDATES_DISABLED", {
+				version: require("../package.json").version,
+			})
+		);
+
+	addSongsFromQueueFile();
+
+	LiveConsole.outputLine.update(Locale.get("TYPE_INPUT_HELP"));
 }
 
 function clearSuggestions() {
@@ -344,7 +360,8 @@ async function fetchAndShowSearchSuggestions(original) {
 		!config.suggestionsEnabled ||
 		selectingProvider ||
 		searchedTracks ||
-		!original
+		!original ||
+		selectingLanguage
 	)
 		return;
 	const suggestRate = config.suggestRate;
@@ -413,7 +430,7 @@ const commands = {
 	},
 	file: () => {
 		const song = downloaded[0];
-		if (!song) return "No song downloaded!";
+		if (!song) return Locale.get("NO_SONG_DOWNLOADED");
 		cp.exec(`explorer /select, ${song.finalFilePath}"`);
 	},
 	config: () => {
@@ -460,6 +477,20 @@ const commands = {
 };
 
 function processText(text: string) {
+	if (selectingLanguage) {
+		config.language = text;
+		saveConfig();
+		Locale.setLanguage(config.language);
+		Locale.load();
+		selectingLanguage.update(
+			Locale.get("LANGUAGE_SELECTED", {
+				language: Locale.get("LANGUAGE_NAME"),
+			})
+		);
+		start();
+		return;
+	}
+
 	const cmd = commands[text];
 	if (cmd) {
 		const exec = cmd();
@@ -484,24 +515,27 @@ function processText(text: string) {
 			searchedTracks = null;
 			outputLineOccupied = false;
 			return LiveConsole.outputLine.update(
-				"Track number not selected, cancelled operation.\n" +
-					"Type the name of the song you want to download:"
+				Locale.get("TRACK_NUMBER_NOT_SELECTED") +
+					"\n" +
+					Locale.get("TYPE_INPUT")
 			);
 		}
 		const track = searchedTracks[int];
 		if (!track)
 			return LiveConsole.outputLine.update(
-				`Could not find track with ID ${int}. Number needs to be between 0 and ${
-					searchedTracks.length || 0
-				}\n` + "Type the name of the song you want to download:"
+				Locale.get("TRACK_NUMBER_NOT_FOUND", {
+					id: int,
+					min: 0,
+					max: searchedTracks.length || 0,
+				}) +
+					"\n" +
+					Locale.get("TYPE_INPUT")
 			);
 		url = track.url;
 		searchedTracks = null;
 		outputLineOccupied = false;
 		LiveConsole.outputLine.update(
-			`${
-				downloader.getQueue().length
-			} elements in queue. Waiting for input...`
+			Locale.get("QUEUE_INPUT", { count: downloader.getQueue().length })
 		);
 	}
 
@@ -535,15 +569,19 @@ function processText(text: string) {
 
 main();
 
+export function writeErrorStack(text: string) {
+	try {
+		const date = moment().format("MMMM Do YYYY, h:mm:ss A");
+		fs.appendFileSync(errorsFilePath, "\n\n" + date + "\n\n" + text);
+	} catch (e) {
+		console.error(e);
+	}
+}
+
 process.on("uncaughtException", (e) => {
 	//LiveConsole.log("Uncaught exception!");
 	writeErrorStack(e.stack);
 });
-
-export function writeErrorStack(text: string) {
-	const date = moment().format("MMMM Do YYYY, h:mm:ss A");
-	fs.appendFileSync(errorsFilePath, "\n\n" + date + "\n\n" + text);
-}
 
 async function checkForUpdates() {
 	const line = LiveConsole.log(Locale.get("UPDATE.CHECK"));
@@ -553,13 +591,15 @@ async function checkForUpdates() {
 		.then((d) => d.json())
 		.catch((e: Error) => {
 			line.update(
-				`Could not check for updates (${e.name}): ${e.message}`,
+				`${Locale.get("UPDATE.CHECK_FAILED")} (${e.name}): ${
+					e.message
+				}`,
 				false
 			);
 			writeErrorStack(e.stack);
 			return null;
 		});
-	if (!data) return line.update(Locale.get("UPDATE.CHECK_FAILED"));
+	if (!data) return; //line.update(Locale.get("UPDATE.CHECK_FAILED"));
 	const current_ver = require("../package.json").version;
 	let latest_ver = data.tag_name;
 	if (latest_ver.indexOf("v") >= 0)
@@ -604,6 +644,7 @@ async function checkForUpdates() {
 }
 
 export const queueListFile = path.join(AppDataFolder, "queue_list.txt");
+export const failedListFile = path.join(AppDataFolder, "failed_list.txt");
 
 function addSongsFromQueueFile() {
 	if (!fs.existsSync(queueListFile)) return;
@@ -616,7 +657,7 @@ function addSongsFromQueueFile() {
 		queued++;
 	}
 	if (queued > 0)
-		LiveConsole.log(`Queued ${queued} songs from the queue file.`);
+		LiveConsole.log(Locale.get("QUEUED_FROM_FILE", { count: queued }));
 }
 
 async function searchTracksFromProvider(
@@ -625,7 +666,10 @@ async function searchTracksFromProvider(
 ) {
 	outputLineOccupied = true;
 	LiveConsole.outputLine.update(
-		`Searching tracks (${SongProvider[selectedProvider]}): ${searchedText}`
+		Locale.get("SEARCHING_TRACKS", {
+			provider: SongProvider[selectedProvider],
+			search: searchedText,
+		})
 	);
 	const start = performance.now();
 
@@ -642,22 +686,21 @@ async function searchTracksFromProvider(
 				break;
 			default:
 				LiveConsole.outputLine.update(
-					"Could not search, unknown provider."
+					Locale.get("SEARCH_FAILED") +
+						" " +
+						Locale.get("UNKNOWN_PROVIDER")
 				);
 				return;
 		}
 	} catch (e) {
-		LiveConsole.outputLine.update("Could not search: " + e.message);
+		LiveConsole.outputLine.update(
+			Locale.get("SEARCH_FAILED") + " " + e.message
+		);
 		writeErrorStack(e.stack);
 	}
 
-	if (!searchedTracks) {
-		LiveConsole.outputLine.update("Could not search tracks.");
-		return;
-	}
-
-	if (searchedTracks.length <= 0) {
-		LiveConsole.outputLine.update("Could not find any tracks.");
+	if (!searchedTracks || searchedTracks.length <= 0) {
+		LiveConsole.outputLine.update(Locale.get("SEARCH_EMPTY"));
 		return;
 	}
 
@@ -670,12 +713,15 @@ async function searchTracksFromProvider(
 		t += `${track.username} - ${track.title}` + "\n";
 		i++;
 	}
-	t += "-------------------------------\n";
-	t +=
-		`Found ${searchedTracks.length} tracks in ${Math.round(
-			performance.now() - start
-		)}ms` + "\n";
-	t += "Type the track number to download it.\nType anything else to cancel.";
+	t += [
+		"-------------------------------",
+		Locale.get("FOUND_TRACKS_IN_TIME", {
+			count: searchedTracks.length,
+			time: Math.round(performance.now() - start) + "ms",
+		}),
+		Locale.get("TRACK_NUMBER_TYPE"),
+		Locale.get("TYPE_ANYTHING_ELSE_TO_CANCEL"),
+	].join("\n");
 	LiveConsole.outputLine.update(t);
 }
 

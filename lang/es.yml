@@ -1,14 +1,20 @@
 APP_NAME: "Simple Descargador de Canciones"
-TYPE_INPUT: "Escribe el nombre de la canción que quieres descargar, o escribe 'help' para ver el menú de ayuda."
+LANGUAGE_NAME: "Español"
+TYPE_INPUT_HELP: "Escribe el nombre de la canción que quieres descargar, o escribe 'help' para ver el menú de ayuda."
+TYPE_INPUT: "Escribe el nombre de la canción que quieres descargar:"
 ARROWS_NAVIGATE: "Usa las flechas del teclado para navegar"
+LANGUAGE_SELECTED: "Lenguaje seleccionado: {language}"
 
 COMMANDS:
   DOWNLOAD_FFMPEG: "Descarga FFmpeg."
   FORCE: "Fuerza que la cola sea procesada."
   FOLDER: "Abre la carpeta de la aplicación."
+  FILE: "Abre el elemento descargado en el explorador de archivos"
   CONFIG: "Abre el archivo de configuración."
   QUEUE: "Muestra las canciones en la cola."
   HELP: "Muestra el menú de ayuda."
+  CREDENTIALS: "Muestra tus credenciales (contenido muy sensible)"
+  RELOAD: "Recarga la configuración"
 
 OPENED_CONFIG_FILE: "¡Se ha abierto el archivo de configuración!"
 OPENED_APP_FOLDER: "¡Se ha abierto la carpeta de la aplicación!"
@@ -17,6 +23,12 @@ COMMAND_LIST: "Lista de comandos"
 
 SELECT_PROVIDER: "Selecciona el proveedor: {search}"
 PRESS_CORRESPONDING_KEY: "Presiona la tecla correspondiente: {providers}"
+TRACK_NUMBER_TYPE: "Escribe el número de canción para descargarla."
+TRACK_NUMBER_NOT_SELECTED: "No se ha seleccionado el número de canción, operación cancelada."
+TRACK_NUMBER_NOT_FOUND: "No se ha encontrado la canción con el número {id}. El número necesita estar entre {min} y {max}."
+TYPE_ANYTHING_ELSE_TO_CANCEL: "Escribe cualquier otra cosa para cancelar."
+FOUND_TRACKS_IN_TIME: "Se han encontrado {count} canciones en {time}"
+QUEUE_INPUT: "{count} elementos en la cola. Esperando la entrada del usuario..."
 
 EXECUTED_COMMAND: "Comando ejecutado"
 
@@ -33,11 +45,21 @@ PROVIDER:
   UNKNOWN: "Proveedor desconocido: {provider}"
 
 QUEUE_EMPTY: "La cola está vacía. Esperando entrada del usuario..."
-CHECK_FOLDER: "Type 'file' to go to the downloaded file."
+QUEUED_FROM_FILE: "Se agregaron {count} canciones desde el archivo de cola."
+SEARCHING_TRACKS: "Buscando canciones ({provider}): {search}"
+SEARCH_FAILED: "La busqueda falló."
+SEARCH_EMPTY: "No se encontraron canciones."
+UNKNOWN_PROVIDER: "Proveedor desconocido."
+CHECK_FOLDER: "Escribe 'file' para acceder al archivo descargado."
+USING_DEFAULT_CONFIG: "No se pudo leer la configuración, ¡usando los valores por defecto!"
+SAVED_CREDENTIALS: "Credenciales guardadas"
+UPDATES_DISABLED: "Las actualizaciones están desactivadas. Versión actual: {version}"
 
 DOWNLOADER:
   DOWNLOADED_PROCESSED: "Descarga finalizada y procesada."
   DOWNLOADED: "Descarga completada."
+  NO_SONG_DOWNLOADED: "¡No se descargó ninguna canción!"
+  ALREADY_DOWNLOADED: "La canción ya estaba descargada."
   PROCESS_ERROR: "No se ha podido procesar."
   PROCESS_WAITING: "Procesando..."
   DOWNLOAD_WAITING: "Inicializando descarga..."

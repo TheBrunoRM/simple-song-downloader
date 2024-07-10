@@ -1,14 +1,20 @@
 APP_NAME: "Simple Song Downloader"
-TYPE_INPUT: "Type the name of the song you want to download, or type 'help' to see the help menu."
+LANGUAGE_NAME: "English"
+TYPE_INPUT_HELP: "Type the name of the song you want to download, or type 'help' to see the help menu."
+TYPE_INPUT: "Type the name of the song you want to download:"
 ARROWS_NAVIGATE: "Use the arrows to navigate"
+LANGUAGE_SELECTED: "Language selected: {language}"
 
 COMMANDS:
   DOWNLOAD_FFMPEG: "Downloads FFmpeg"
   FORCE: "Forces the queue to be processed"
   FOLDER: "Opens the application data folder"
+  FILE: "Opens the downloaded element in the file explorer"
   CONFIG: "Opens the configuration file"
   QUEUE: "Display the songs in the queue"
   HELP: "Displays the help menu"
+  CREDENTIALS: "Shows your credentials (very sensitive)"
+  RELOAD: "Reloads the configuration"
 
 OPENED_CONFIG_FILE: "Opened configuration file!"
 OPENED_APP_FOLDER: "Opened application folder!"
@@ -17,6 +23,12 @@ COMMAND_LIST: "Command list"
 
 SELECT_PROVIDER: "Select provider: {search}"
 PRESS_CORRESPONDING_KEY: "Press the corresponding key: {providers}"
+TRACK_NUMBER_TYPE: "Type the track number to download it."
+TRACK_NUMBER_NOT_SELECTED: "Track number not selected, cancelled operation."
+TRACK_NUMBER_NOT_FOUND: "Could not find track with ID {id}. Number needs to be between {min} and {max}."
+TYPE_ANYTHING_ELSE_TO_CANCEL: "Type anything else to cancel."
+FOUND_TRACKS_IN_TIME: "Found {count} tracks in {time}"
+QUEUE_INPUT: "{count} elements in queue. Waiting for user input..."
 
 EXECUTED_COMMAND: "Executed command"
 
@@ -33,11 +45,21 @@ PROVIDER:
   UNKNOWN: "Unknown song provider: {provider}"
 
 QUEUE_EMPTY: "The queue is empty. Waiting for input..."
+QUEUED_FROM_FILE: "Queued {count} songs from the queue file."
+SEARCHING_TRACKS: "Searching tracks ({provider}): {search}"
+SEARCH_FAILED: "Search failed."
+SEARCH_EMPTY: "Could not find any tracks."
+UNKNOWN_PROVIDER: "Unknown provider."
 CHECK_FOLDER: "Type 'file' to go to the downloaded file."
+USING_DEFAULT_CONFIG: "Could not read configuration, using default values!"
+SAVED_CREDENTIALS: "Saved credentials"
+UPDATES_DISABLED: "Update checks are disabled. Current version: {version}"
 
 DOWNLOADER:
   DOWNLOADED_PROCESSED: "Successfully downloaded and processed."
   DOWNLOADED: "Successfully downloaded."
+  NO_SONG_DOWNLOADED: "There was no song downloaded!"
+  ALREADY_DOWNLOADED: "Song was already downloaded."
   PROCESS_ERROR: "Could not process."
   PROCESS_WAITING: "Initializing process..."
   DOWNLOAD_WAITING: "Initializing download..."

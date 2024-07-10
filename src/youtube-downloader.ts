@@ -6,9 +6,11 @@ import { Readable } from "node:stream";
 import Queuer from "./queuer";
 import { Song } from "./song";
 import { setTimeout } from "timers/promises";
+import { setTimeout as setTimeout2 } from "timers";
 import {
 	AppDataFolder,
 	config,
+	credentials,
 	formatProgress,
 	log,
 	writeErrorStack,
@@ -27,12 +29,20 @@ export async function download(song: Song) {
 	song.download_tries++;
 
 	log("getting info for: " + url);
-	let error = null;
-	const info: videoInfo = await ytdl.getInfo(url).catch((e) => {
-		writeErrorStack(e.stack);
-		error = e;
-		return null;
+	new Promise(async () => {
+		await setTimeout(1);
+		song.updateLine("Getting info from YouTube...");
 	});
+	let error = null;
+	const info: videoInfo = await Promise.race([
+		ytdl.getInfo(url).catch((e) => {
+			writeErrorStack(e.stack);
+			error = e;
+			return null;
+		}),
+		setTimeout(5000, null),
+	]);
+
 	if (info == null || error) {
 		song.failed = true;
 		song.updateLine("Could not get info from YouTube.");
@@ -41,11 +51,13 @@ export async function download(song: Song) {
 	}
 	song.youtubeMetadata = info.videoDetails;
 
+	song.updateLine("Choosing format...");
 	const format = ytdl.chooseFormat(info.formats, {
 		quality: config.quality,
 		filter: (f) => f.hasAudio && !f.hasVideo,
 	});
 
+	song.updateLine("Audio bitrate: " + format.audioBitrate);
 	log("audio bitrate: " + format.audioBitrate);
 
 	const fileName = truncateName(song.getDisplay()).replace(
@@ -80,6 +92,7 @@ export async function download(song: Song) {
 	if (fs.existsSync(finalFilePath)) {
 		song.downloaded = true;
 		song.processed = true;
+		song.already = true;
 		log("the final file already exists, not downloading.");
 		return;
 	}
@@ -90,7 +103,7 @@ export async function download(song: Song) {
 		highWaterMark: config.MAX_CONTENT_LENGTH,
 		requestOptions: {
 			headers: {
-				Cookie: process.env.COOKIE || "",
+				Cookie: credentials.youtube_cookie || "",
 			},
 		},
 		range: {
@@ -110,8 +123,8 @@ export async function download(song: Song) {
 		downloaded = ytdl.downloadFromInfo(info, options);
 	} catch (e) {
 		song.failed = true;
-		LiveConsole.log("Could not download: " + url);
-		LiveConsole.log(e);
+		song.updateLine("Could not download: " + e);
+		writeErrorStack(e);
 		return;
 	}
 
@@ -120,6 +133,7 @@ export async function download(song: Song) {
 	await new Promise<void>(async (resolve, _reject) => {
 		log("starting download of: " + info.videoDetails.title);
 		downloaded.on("info", (_info, _format) => {
+			song.updateLine("Information received!");
 			log("got information for " + info.videoDetails.title);
 		});
 
@@ -141,28 +155,32 @@ export async function download(song: Song) {
 
 		timeout();
 
+		downloaded.on("error", (err) => {
+			song.failed = true;
+			song.updateLine(`(${err.name}) ${err.message}`);
+			resolve();
+		});
+
 		downloaded.on("data", (data) => {
 			fs.writeSync(stream, data);
 			timeout();
 		});
 
 		downloaded.on("progress", async (_len, cur, tot) => {
-			const per = (cur / tot) * 100;
-			song.updateLine(formatProgress(per, cur, tot));
+			song.updateLine(formatProgress(cur, tot));
 		});
 
 		downloaded.on("end", () => {
-			log("finished downloading: " + info.videoDetails.title);
 			resolve();
 		});
 	});
 
 	song.downloading = false;
 	if (cancelled) {
-		song.failed = true;
 		song.updateLine("Download cancelled/yielded.");
 		return;
 	}
+	if (song.failed) return;
 
 	song.downloaded = true;
 }

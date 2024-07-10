@@ -1,4 +1,4 @@
-class ConsoleLine {
+export class ConsoleLine {
 	text: string = "";
 
 	update(newText: string, moveDown = true) {

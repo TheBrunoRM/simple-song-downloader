@@ -15,24 +15,38 @@ function getSystemLanguage() {
 	return language;
 }
 
-function load() {
+function load(): boolean {
 	languages = {};
 
-	for (const languageFile of fs.readdirSync(langFolder)) {
-		const languageName = languageFile.substring(
+	const languageFiles = fs.readdirSync(langFolder);
+	if (
+		!languageFiles
+			.map((file) => file.substring(0, file.length - ".yml".length))
+			.includes(currentLanguage)
+	)
+		LiveConsole.log(
+			"Unknown language set in configuration: " + currentLanguage
+		);
+
+	for (const languageFile of languageFiles) {
+		const languageCode = languageFile.substring(
 			0,
 			languageFile.length - ".yml".length
 		);
+		if (![DEFAULT_LANGUAGE, currentLanguage].includes(languageCode))
+			continue;
 		try {
 			const content = fs.readFileSync(
 				yaml.load(path.join(langFolder, languageFile)),
 				"utf-8"
 			);
-			languages[languageName] = yaml.load(content);
+			languages[languageCode] = yaml.load(content);
 		} catch (e) {
-			writeErrorStack(e);
+			LiveConsole.log("Could not load language: " + languageCode);
+			return false;
 		}
 	}
+	return true;
 }
 
 function getDescendantProp(obj, desc) {
@@ -42,13 +56,15 @@ function getDescendantProp(obj, desc) {
 }
 
 function get(locale, ...params) {
-	if (!locale) throw new Error("Locale is null");
+	if (!locale) return "<no locale specified>"; //throw new Error("Locale is null");
 	const lang = languages[currentLanguage] || languages[DEFAULT_LANGUAGE];
-	if (!lang) throw new Error("Language is null");
+	if (!lang)
+		return locale + (params && params[0] ? JSON.stringify(params[0]) : ""); //throw new Error("Language is null");
 	let msg =
 		getDescendantProp(lang, locale) ||
 		getDescendantProp(languages[DEFAULT_LANGUAGE], locale);
-	if (!msg) return locale;
+	if (!msg)
+		return locale + (params && params[0] ? JSON.stringify(params[0]) : "");
 	let i = 0;
 	for (const param of params) {
 		if (typeof param === "object") {

@@ -6,7 +6,13 @@ import processer from "./processer";
 import ytpl from "ytpl";
 import path from "path";
 import fs from "fs";
-import { log, outputLineOccupied, queueListFile, quit_queued } from "./index";
+import {
+	log,
+	outputLineOccupied,
+	queueListFile,
+	failedListFile,
+	quit_queued,
+} from "./index";
 import LiveConsole from "./liveconsole";
 import Locale from "./locale";
 
@@ -102,10 +108,10 @@ function processQueue() {
 
 		if (song.download_tries > 5) {
 			song.updateLine("Failed too many times, added to failed list.");
-			if (!fs.existsSync("failed_list.txt"))
-				fs.writeFileSync("failed_list.txt", "");
+			if (!fs.existsSync(failedListFile))
+				fs.writeFileSync(failedListFile, "");
 			fs.appendFileSync(
-				"failed_list.txt",
+				failedListFile,
 				"\n" + SONG_DISPLAY_FORMAT_IN_SONG_LIST_FILE(song)
 			);
 			queue.splice(queue.indexOf(song), 1);
@@ -130,9 +136,14 @@ function processQueue() {
 		if (song.downloaded) {
 			if (song.processed || song.provider == SongProvider.SoundCloud) {
 				if (song.processed)
-					song.updateLine(
-						Locale.get("DOWNLOADER.DOWNLOADED_PROCESSED")
-					);
+					if (song.already)
+						song.updateLine(
+							Locale.get("DOWNLOADER.ALREADY_DOWNLOADED")
+						);
+					else
+						song.updateLine(
+							Locale.get("DOWNLOADER.DOWNLOADED_PROCESSED")
+						);
 				else if (song.provider == SongProvider.SoundCloud)
 					song.updateLine(Locale.get("DOWNLOADER.DOWNLOADED"));
 
@@ -145,10 +156,10 @@ function processQueue() {
 			}
 			if (song.process_tries >= 3) {
 				song.updateLine(Locale.get("DOWNLOADER.PROCESS_ERROR"));
-				if (!fs.existsSync("failed_list.txt"))
-					fs.writeFileSync("failed_list.txt", "");
+				if (!fs.existsSync(failedListFile))
+					fs.writeFileSync(failedListFile, "");
 				fs.appendFileSync(
-					"failed_list.txt",
+					failedListFile,
 					"\n" + SONG_DISPLAY_FORMAT_IN_SONG_LIST_FILE(song)
 				);
 				queue.splice(queue.indexOf(song), 1);

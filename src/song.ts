@@ -21,8 +21,8 @@ export class Song {
 	working: boolean = false;
 
 	fresh: boolean = true;
-
 	failed: boolean = false;
+	already: boolean = false;
 
 	downloading: boolean = false;
 	downloaded: boolean = false;

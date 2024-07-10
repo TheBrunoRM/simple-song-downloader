@@ -5,7 +5,13 @@ import path from "path";
 import { Song } from "./song";
 import Queuer from "./queuer";
 import "dotenv/config";
-import { config, credentials, log, saveCredentials } from "./index";
+import {
+	config,
+	credentials,
+	formatProgress,
+	log,
+	saveCredentials,
+} from "./index";
 import LiveConsole from "./liveconsole";
 import { Track } from "./track";
 
@@ -211,6 +217,8 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 		config.soundcloudDownloads,
 		`${username} - ${title}` + ".mp3"
 	);
+	song.downloadPath = finalPath;
+	song.finalFilePath = finalPath;
 
 	// create folders
 	fs.mkdirSync(path.dirname(finalPath), { recursive: true });
@@ -255,6 +263,7 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 	// Get the length of the stream
 	// through the size of the response.
 	const length =
+		parseInt(response.headers.get("content-length")) ||
 		parseInt(response.headers["content-length"]) ||
 		stream["_readableState"]["length"] ||
 		stream["readableLength"] ||
@@ -265,21 +274,25 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 	// Do not download if it is already downloaded
 	if (length > 0 && bytesAlreadyWritten >= length) {
 		song.downloaded = true;
-		song.updateLine("The file is completely downloaded!");
+		song.already = true;
 		return;
 	}
 
+	const start = performance.now();
 	song.downloading = true;
 	return new Promise<SoundCloudTrackMetadata>((resolve, _reject) => {
 		// Writing the data
 		let writtenBytes = 0;
 		stream.on("data", (data) => {
-			writtenBytes += data;
-			if (config.debug) {
-				if (parseInt(length) > 0)
-					song.updateLine(`${(writtenBytes / length) * 100}% ()`);
-				else song.updateLine(`written ${writtenBytes} bytes`);
-			}
+			writtenBytes += data.length;
+			if (parseInt(length) > 0)
+				song.updateLine(formatProgress(writtenBytes, length));
+			else
+				song.updateLine(
+					`[${
+						performance.now() - start
+					}ms] written ${writtenBytes} bytes`
+				);
 			fs.writeSync(file, data);
 		});
 
@@ -287,7 +300,6 @@ export async function download(song: Song): Promise<SoundCloudTrackMetadata> {
 		stream.on("end", () => {
 			song.downloading = false;
 			song.downloaded = true;
-			song.updateLine("finished downloading the file: " + finalPath);
 			resolve(metadata);
 		});
 	});
