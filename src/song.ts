@@ -1,4 +1,4 @@
-import { MoreVideoDetails, VideoDetails, videoInfo } from "ytdl-core";
+import { MoreVideoDetails, VideoDetails, videoInfo } from "@distube/ytdl-core";
 import { SoundCloudTrackMetadata } from "./soundcloud.js";
 import LiveConsole from "./liveconsole.js";
 

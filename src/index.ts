@@ -14,7 +14,8 @@ import { SongProvider } from "./song";
 import { Track } from "./track";
 import moment from "moment";
 import Locale from "./locale";
-import { ChooseFormatQuality, Filter } from "ytdl-core";
+import { chooseFormatOptions, Filter } from "@distube/ytdl-core";
+import { link } from "./ansi-escapes";
 
 let searchedTracks: Track[] = null;
 let selectingProvider = false;
@@ -22,7 +23,8 @@ let selectedProvider: SongProvider = null;
 let searchedText = null;
 let cursorX = 0;
 let typingText = "";
-let selectingLanguage: ConsoleLine = null;
+let selectingLanguage: boolean = false;
+let selectingLanguageLine: ConsoleLine = null;
 
 let selectedSuggestion = 0;
 let lastSuggestionResultFetch = null;
@@ -50,7 +52,7 @@ class ConfigurationStructure {
 	defaultColor: number = 0;
 	language: string = Locale.DEFAULT_LANGUAGE;
 	MAX_CONTENT_LENGTH: number = 1024 * 1024 * 16;
-	quality: ChooseFormatQuality = "highestaudio";
+	quality: any = { quality: "highestaudio" };
 	filter: Filter = "audioonly";
 	youtubeDownloads: string = "./downloads";
 	soundcloudDownloads: string = "./downloads-soundcloud";
@@ -307,7 +309,8 @@ async function main() {
 
 	if (!fs.existsSync(configFilePath)) {
 		fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig));
-		selectingLanguage = LiveConsole.log(
+		selectingLanguage = true;
+		selectingLanguageLine = LiveConsole.log(
 			"English: type 'en'\nEspañol: escribe 'es'"
 		);
 		return;
@@ -465,11 +468,9 @@ const commands = {
 				.join("\n")
 		);
 	},
-
 	credentials: () => {
 		return JSON.stringify(credentials, null, 4);
 	},
-
 	reload: () => {
 		loadConfiguration();
 		return Locale.get("RELOADED_CONFIG");
@@ -478,11 +479,12 @@ const commands = {
 
 function processText(text: string) {
 	if (selectingLanguage) {
+		selectingLanguage = false;
 		config.language = text;
 		saveConfig();
 		Locale.setLanguage(config.language);
 		Locale.load();
-		selectingLanguage.update(
+		selectingLanguageLine?.update(
 			Locale.get("LANGUAGE_SELECTED", {
 				language: Locale.get("LANGUAGE_NAME"),
 			})
@@ -710,7 +712,7 @@ async function searchTracksFromProvider(
 		t += `${i} > `;
 		const album = track.album ? `[${track.album}] ` : null;
 		if (album) t += album;
-		t += `${track.username} - ${track.title}` + "\n";
+		t += link(`${track.username} - ${track.title}`, track.url) + "\n";
 		i++;
 	}
 	t += [

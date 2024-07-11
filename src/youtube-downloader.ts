@@ -1,4 +1,8 @@
-import ytdl, { downloadOptions, videoFormat, videoInfo } from "ytdl-core";
+import ytdl, {
+	downloadOptions,
+	videoFormat,
+	videoInfo,
+} from "@distube/ytdl-core";
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
