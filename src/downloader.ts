@@ -12,6 +12,7 @@ import {
 	queueListFile,
 	failedListFile,
 	quit_queued,
+	writeErrorStack,
 } from "./index";
 import LiveConsole from "./liveconsole";
 import Locale from "./locale";
@@ -55,11 +56,11 @@ async function add(_url: string, _parentFolder?: string) {
 		const playlist = await ytpl
 			.getPlaylistID(_url)
 			.then((id) => ytpl(id))
-			.catch((err) => {
-				console.warn(
-					"Could not get songs from playlist:" + err.message
+			.catch((err: Error) => {
+				LiveConsole.outputLine.update(
+					"Could not get songs from YouTube playlist: " + err.message
 				);
-				console.error(err);
+				writeErrorStack(err.stack);
 				return;
 			});
 		if (!playlist) return;
@@ -72,6 +73,10 @@ async function add(_url: string, _parentFolder?: string) {
 				)
 			);
 		}
+		// TODO add hyperlink and translate
+		LiveConsole.outputLine.update(
+			`Added ${playlist.items} songs from YouTube playlist: ${playlist.title}`
+		);
 	} else {
 		queue.push(new Song(_url, provider, _parentFolder));
 	}

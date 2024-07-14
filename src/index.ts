@@ -512,39 +512,50 @@ function processText(text: string) {
 
 	let url = null;
 	if (searchedTracks) {
-		let int = parseInt(text);
-		if (isNaN(int)) {
+		const numbers = text.split(/, */g);
+		let selected = false;
+		for (const number of numbers) {
+			let int = parseInt(number);
+			if (isNaN(int)) continue;
+			const track = searchedTracks[int];
+			if (!track) {
+				LiveConsole.outputLine.append(
+					"\n" +
+						Locale.get("TRACK_NUMBER_NOT_FOUND", {
+							id: int,
+							min: 0,
+							max: searchedTracks.length || 0,
+						})
+				);
+				continue;
+			}
+			downloader.add(track.url);
+			selected = true;
+		}
+		if (!selected) {
 			searchedTracks = null;
 			outputLineOccupied = false;
-			return LiveConsole.outputLine.update(
+			LiveConsole.outputLine.update(
 				Locale.get("TRACK_NUMBER_NOT_SELECTED") +
 					"\n" +
 					Locale.get("TYPE_INPUT")
 			);
+			return;
 		}
-		const track = searchedTracks[int];
-		if (!track)
-			return LiveConsole.outputLine.update(
-				Locale.get("TRACK_NUMBER_NOT_FOUND", {
-					id: int,
-					min: 0,
-					max: searchedTracks.length || 0,
-				}) +
-					"\n" +
-					Locale.get("TYPE_INPUT")
-			);
-		url = track.url;
 		searchedTracks = null;
 		outputLineOccupied = false;
 		LiveConsole.outputLine.update(
-			Locale.get("QUEUE_INPUT", { count: downloader.getQueue().length })
+			Locale.get("QUEUE_INPUT", {
+				count: downloader.getQueue().length,
+			})
 		);
+		return;
 	}
 
 	if (!url) {
 		try {
 			new URL(text);
-			url = text;
+			downloader.add(text);
 		} catch (e) {
 			searchedText = text;
 			LiveConsole.outputLine.update(
@@ -565,8 +576,6 @@ function processText(text: string) {
 			return;
 		}
 	}
-
-	downloader.add(url);
 }
 
 main();
@@ -708,7 +717,7 @@ async function searchTracksFromProvider(
 
 	let i = 0;
 	let t = "";
-	for (const track of searchedTracks.slice(0, 5)) {
+	for (const track of searchedTracks) {
 		t += `${i} > `;
 		const album = track.album ? `[${track.album}] ` : null;
 		if (album) t += album;

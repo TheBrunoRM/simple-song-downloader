@@ -45,10 +45,12 @@ class LiveConsole extends null {
 			return;
 		}
 
-		console.clear();
+		// clear scrollback
+		process.stdout.write("\x1Bc");
+		//console.clear();
 
-		// hide cursor
 		let text = "";
+		// hide cursor
 		text += "\u001b[?25l";
 		//text += "\u001b[3J\u001b[1J";
 		//text += "\u001b[2J\u001b[0;0H";
