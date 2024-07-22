@@ -47,13 +47,15 @@ class ConfigurationStructure {
 	debug: boolean = false;
 	suggestRate: number = 1000;
 	check_for_updates: boolean = true;
-	ffmpegPath: string;
+	ffmpegPath: string = "";
 	suggestionColor: number = 36;
 	defaultColor: number = 0;
 	language: string = Locale.DEFAULT_LANGUAGE;
 	MAX_CONTENT_LENGTH: number = 1024 * 1024 * 16;
-	quality: any = { quality: "highestaudio" };
-	filter: Filter = "audioonly";
+	format: chooseFormatOptions = {
+		quality: "highestaudio",
+		filter: (f) => f.hasAudio && !f.hasVideo,
+	};
 	youtubeDownloads: string = "./downloads";
 	soundcloudDownloads: string = "./downloads-soundcloud";
 	suggestionsEnabled: boolean = true;

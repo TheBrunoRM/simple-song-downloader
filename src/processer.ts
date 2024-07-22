@@ -47,7 +47,7 @@ export async function processSong(song: Song) {
 	log("processing with ffmpeg: " + downloadPath + " to " + finalFilePath);
 	song.processing = true;
 	song.updateLine("Initializing process...");
-
+	
 	return new Promise<void>((resolve, _reject) => {
 		try {
 			ffmpeg(downloadPath)
@@ -58,7 +58,7 @@ export async function processSong(song: Song) {
 				})
 				.on("progress", (progress) =>
 					song.updateLine(
-						`Processing: ${(progress.percent || 0).toFixed(2)}%`
+						`Processing: ${progress.percent ? (progress.percent).toFixed(2)+"%" : (progress.currentKbps || 0) + "kbps"}`
 					)
 				) // TODO loading bar
 				.on("end", function () {

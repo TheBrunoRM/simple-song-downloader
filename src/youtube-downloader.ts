@@ -55,11 +55,16 @@ export async function download(song: Song) {
 	}
 	song.youtubeMetadata = info.videoDetails;
 
-	song.updateLine("Choosing format...");
-	const format = ytdl.chooseFormat(info.formats, {
-		quality: config.quality,
-		filter: (f) => f.hasAudio && !f.hasVideo,
-	});
+	song.updateLine(`Choosing format (${config.format.quality})... (${info.formats.length} available)`);
+	let format;
+	try {
+		format = ytdl.chooseFormat(info.formats, config.format);
+	} catch(e) {
+		song.failed = true;
+		//song.updateLine("Could not choose format: " + e.message);
+		writeErrorStack(e.stack);
+		return;
+	}
 
 	song.updateLine("Audio bitrate: " + format.audioBitrate);
 	log("audio bitrate: " + format.audioBitrate);
@@ -102,8 +107,7 @@ export async function download(song: Song) {
 	}
 
 	let options: downloadOptions = {
-		quality: config.quality,
-		filter: config.filter,
+		...config.format,
 		highWaterMark: config.MAX_CONTENT_LENGTH,
 		requestOptions: {
 			headers: {
