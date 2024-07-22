@@ -1,7 +1,7 @@
 {
 	"name": "simple-song-downloader",
 	"description": "simple-song-downloader",
-	"version": "1.2.2",
+	"version": "1.2.3",
 	"main": "dist/index.js",
 	"scripts": {
 		"comp": "npx tsc && cd src && npx copyfiles ./package.json ../dist/ && cd .. && npx copyfiles lang/* dist",
