@@ -1,7 +1,7 @@
 {
 	"name": "simple-song-downloader",
 	"description": "simple-song-downloader",
-	"version": "1.2.3",
+	"version": "1.2.4",
 	"main": "dist/index.js",
 	"scripts": {
 		"comp": "npx tsc && cd src && npx copyfiles ./package.json ../dist/ && cd .. && npx copyfiles lang/* dist",
@@ -20,7 +20,7 @@
 	},
 	"homepage": "https://github.com/TheBrunoRM/simple-song-downloader#readme",
 	"dependencies": {
-		"@distube/ytdl-core": "^4.13.5",
+		"@distube/ytdl-core": "^4.13.7",
 		"@ffmpeg-installer/ffmpeg": "^1.1.0",
 		"adm-zip": "^0.5.10",
 		"dotenv": "^16.3.1",

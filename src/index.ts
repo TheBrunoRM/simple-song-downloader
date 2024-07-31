@@ -309,6 +309,7 @@ async function main() {
 		fs.writeFileSync(credentialsFilePath, "");
 	}
 
+	// first startup initial configuration
 	if (!fs.existsSync(configFilePath)) {
 		fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig));
 		selectingLanguage = true;
@@ -514,35 +515,39 @@ function processText(text: string) {
 
 	let url = null;
 	if (searchedTracks) {
-		const numbers = text.split(/, */g);
-		let selected = false;
-		for (const number of numbers) {
-			let int = parseInt(number);
-			if (isNaN(int)) continue;
-			const track = searchedTracks[int];
-			if (!track) {
-				LiveConsole.outputLine.append(
-					"\n" +
-						Locale.get("TRACK_NUMBER_NOT_FOUND", {
-							id: int,
-							min: 0,
-							max: searchedTracks.length || 0,
-						})
-				);
-				continue;
+		if(text == "all") {
+			for(const track of searchedTracks) downloader.add(track.url);
+		} else {
+			const numbers = text.split(/, */g);
+			let selected = false;
+			for (const number of numbers) {
+				let int = parseInt(number);
+				if (isNaN(int)) continue;
+				const track = searchedTracks[int];
+				if (!track) {
+					LiveConsole.outputLine.append(
+						"\n" +
+							Locale.get("TRACK_NUMBER_NOT_FOUND", {
+								id: int,
+								min: 0,
+								max: searchedTracks.length || 0,
+							})
+					);
+					continue;
+				}
+				downloader.add(track.url);
+				selected = true;
 			}
-			downloader.add(track.url);
-			selected = true;
-		}
-		if (!selected) {
-			searchedTracks = null;
-			outputLineOccupied = false;
-			LiveConsole.outputLine.update(
-				Locale.get("TRACK_NUMBER_NOT_SELECTED") +
-					"\n" +
-					Locale.get("TYPE_INPUT")
-			);
-			return;
+			if (!selected) {
+				searchedTracks = null;
+				outputLineOccupied = false;
+				LiveConsole.outputLine.update(
+					Locale.get("TRACK_NUMBER_NOT_SELECTED") +
+						"\n" +
+						Locale.get("TYPE_INPUT")
+				);
+				return;
+			}
 		}
 		searchedTracks = null;
 		outputLineOccupied = false;

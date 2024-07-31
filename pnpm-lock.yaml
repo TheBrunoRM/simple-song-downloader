@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@distube/ytdl-core':
-        specifier: ^4.13.5
-        version: 4.13.5
+        specifier: ^4.13.7
+        version: 4.13.7
       '@ffmpeg-installer/ffmpeg':
         specifier: ^1.1.0
         version: 1.1.0
@@ -96,8 +96,8 @@ packages:
     resolution: {integrity: sha512-YuGopBq3ke25BVSiS6fgF49Ul9gH1x70Bcr6bqRLjWCkcX8Hre1/5+z+IiWOIerRMSSEfGZVB9z9kyq7wVs9YA==}
     engines: {node: '>=6.9.0'}
 
-  '@distube/ytdl-core@4.13.5':
-    resolution: {integrity: sha512-g+4UJIR/auAJbia7iB0aWvaJDbs22P53NySWa47b1NT4xMTDJYguxHFArPrvRkcJrb/AgKjv/XoSZGghpL0CJA==}
+  '@distube/ytdl-core@4.13.7':
+    resolution: {integrity: sha512-xpovwZVPwQ0R4Mrwt/fhh1rqmBjiZ5qj30ck5kz+mQJ5XPzW9dUiTDz89qCxO3YvgbCAqaC5BNNnWiFC2uCV5Q==}
     engines: {node: '>=16'}
 
   '@ffmpeg-installer/darwin-arm64@4.1.5':
@@ -1269,7 +1269,7 @@ snapshots:
       '@babel/helper-validator-identifier': 7.22.15
       to-fast-properties: 2.0.0
 
-  '@distube/ytdl-core@4.13.5':
+  '@distube/ytdl-core@4.13.7':
     dependencies:
       http-cookie-agent: 6.0.5(tough-cookie@4.1.4)(undici@6.19.2)
       m3u8stream: 0.8.6
