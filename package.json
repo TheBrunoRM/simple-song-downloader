@@ -20,7 +20,7 @@
 	},
 	"homepage": "https://github.com/TheBrunoRM/simple-song-downloader#readme",
 	"dependencies": {
-		"@distube/ytdl-core": "^4.13.7",
+		"@distube/ytdl-core": "^4.14.1",
 		"@ffmpeg-installer/ffmpeg": "^1.1.0",
 		"adm-zip": "^0.5.10",
 		"dotenv": "^16.3.1",
