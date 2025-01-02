@@ -50,7 +50,7 @@ async function add(_url: string, _parentFolder?: string) {
 
 	if (
 		provider == SongProvider.YouTube &&
-		url.pathname.startsWith("/playlist")
+		(url.pathname.startsWith("/playlist") || url.pathname.startsWith("/channel"))
 	) {
 		LiveConsole.outputLine.update("Getting songs from YouTube playlist...");
 		const playlist = await ytpl
