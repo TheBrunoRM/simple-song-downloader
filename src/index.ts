@@ -1,19 +1,20 @@
+import "source-map-support/register";
+import LiveConsole, { ConsoleLine } from "./liveconsole";
+import Locale from "./locale";
 import downloader, { downloaded } from "./downloader";
 import { download, searchSongs, searchTracks } from "./soundcloud";
-import fs, { write } from "fs";
-import cp from "child_process";
 import youtubeMusic from "./youtube-music";
-import readline, { Key } from "readline";
-import fetch from "node-fetch";
-import "source-map-support/register";
 import processer from "./processer";
-import LiveConsole, { ConsoleLine } from "./liveconsole";
-import ffmpeg from "fluent-ffmpeg";
-import path from "path";
 import { SongProvider } from "./song";
 import { Track } from "./track";
+
+import fs, { write } from "fs";
+import cp from "child_process";
+import readline, { Key } from "readline";
+import fetch from "node-fetch";
+import ffmpeg from "fluent-ffmpeg";
+import path from "path";
 import moment from "moment";
-import Locale from "./locale";
 import { chooseFormatOptions, Filter } from "@distube/ytdl-core";
 import { link } from "./ansi-escapes";
 

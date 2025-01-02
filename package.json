@@ -4,7 +4,7 @@
 	"version": "1.2.4",
 	"main": "dist/index.js",
 	"scripts": {
-		"comp": "npx tsc && cd src && npx copyfiles ./package.json ../dist/ && cd .. && npx copyfiles lang/* dist",
+		"comp": "rimraf ./dist/ && npx tsc && cd src && npx copyfiles ./package.json ../dist/ && cd .. && npx copyfiles lang/* dist",
 		"build": "npm run comp && node dev/build.js",
 		"restart": "npm run comp && npm start",
 		"start": "node --trace-warnings ."
@@ -41,6 +41,7 @@
 		"@types/node": "^18.17.14",
 		"archiver": "^5.3.2",
 		"copyfiles": "^2.4.1",
+		"rimraf": "^6.0.1",
 		"source-map-support": "^0.5.21"
 	}
 }
