@@ -97,12 +97,11 @@ function processQueue() {
 	if (!fs.existsSync(queueListFile)) fs.writeFileSync(queueListFile, "");
 	const listfile = fs.readFileSync(queueListFile).toString().split("\n");
 
-	const filtered = queue.filter(
-		(song) => !song.downloading && !song.processing
-	);
-	if (filtered.length > 0)
-		log(`Updating status of ${filtered.length} songs.`);
+	/*
+	if (getWaitingQueue().length > 0)
+		log(`Updating status of ${getWaitingQueue().length} songs.`);
 	if (queue.length > 0) log(`Songs in queue: ${queue.length}`);
+	*/
 
 	// here we create a copy of the queue,
 	// so we modify the original queue
@@ -175,9 +174,8 @@ function processQueue() {
 			continue;
 		}
 
-		if (song.working) continue;
+		if (song.working || song.downloading || song.processing) continue;
 
-		if (!song.downloading) {
 			try {
 				switch (song.provider) {
 					case SongProvider.YouTube:
@@ -198,13 +196,6 @@ function processQueue() {
 				song.updateLine(Locale.get("DOWNLOADER.DOWNLOAD_WAITING"));
 			} catch (e) {
 				song.updateLine(Locale.get("DOWNLOADER.ERROR"));
-			}
-		} else {
-			// skip songs that are already being worked on
-			if (song.downloading || song.processing) continue;
-			// unknown song state, just remove it
-			queue.splice(queue.indexOf(song), 1);
-			continue;
 		}
 	}
 
@@ -218,4 +209,10 @@ function processQueue() {
 
 const getQueue = () => queue;
 
-export default { add, processQueue, getQueue };
+const getWaitingQueue = () => getQueue().filter(
+	(song) => !song.working && !song.downloading && !song.processing && !song.failed
+);
+
+const getDownloaded = () => downloaded;
+
+export default { add, processQueue, getQueue, getWaitingQueue, getDownloaded };

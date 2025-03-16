@@ -66,6 +66,7 @@ class ConfigurationStructure {
 class Credentials {
 	soundcloud_client_id: string;
 	youtube_cookie: string;
+	youtube_cookies: Cookie[];
 }
 
 const defaultConfig = new ConfigurationStructure();
@@ -540,7 +541,10 @@ function processText(text: string) {
 		outputLineOccupied = false;
 		LiveConsole.outputLine.update(
 			Locale.get("QUEUE_INPUT", {
-				count: downloader.getQueue().length,
+				count: [
+					downloader.getWaitingQueue().length,
+					downloader.getQueue().length
+				].join("/")
 			})
 		);
 		return;

@@ -1,4 +1,6 @@
 import ytdl, {
+	Agent,
+	createAgent,
 	downloadOptions,
 	videoFormat,
 	videoInfo,
