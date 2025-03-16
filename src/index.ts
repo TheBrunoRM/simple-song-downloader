@@ -1,7 +1,7 @@
 import "source-map-support/register";
 import LiveConsole, { ConsoleLine } from "./liveconsole";
 import Locale from "./locale";
-import downloader, { downloaded } from "./downloader";
+import downloader from "./downloader";
 import { download, searchSongs, searchTracks } from "./soundcloud";
 import youtubeMusic from "./youtube-music";
 import processer from "./processer";
@@ -48,6 +48,8 @@ class ConfigurationStructure {
 	identation: number = 2;
 	debug: boolean = false;
 	suggestRate: number = 1000;
+	max_download_tries: number = 5;
+	max_process_tries: number = 3;
 	check_for_updates: boolean = true;
 	ffmpegPath: string = "";
 	suggestionColor: number = 36;
@@ -72,10 +74,14 @@ class Credentials {
 const defaultConfig = new ConfigurationStructure();
 export let config: ConfigurationStructure = defaultConfig;
 export const saveConfig = () =>
-	fs.writeFileSync(
-		configFilePath,
-		Buffer.from(JSON.stringify(config, null, config.identation))
-	);
+	{
+		if(config.debug)
+			LiveConsole.log("Saving configuration!");
+		fs.writeFileSync(
+			configFilePath,
+			Buffer.from(JSON.stringify(config, null, config.identation))
+		);
+	}
 export let outputLineOccupied = false;
 
 const AppData =
@@ -121,11 +127,16 @@ function loadConfiguration() {
 		config = defaultConfig;
 	}
 
+	if(config.debug)
+		LiveConsole.log("Loading configuration...");
+
 	// add missing keys
 	const keys = Object.keys(config);
 	const default_keys = Object.keys(defaultConfig);
 	for (const key of default_keys)
 		if (!keys.includes(key)) {
+			if(config.debug)
+				LiveConsole.log("[debug] adding config missing key: " + key);
 			config[key] = defaultConfig[key];
 		}
 
@@ -133,6 +144,8 @@ function loadConfiguration() {
 	for (const key of keys)
 		if (!key.startsWith("WARNING_UNUSED_") && !default_keys.includes(key)) {
 			config["WARNING_UNUSED_" + key] = config[key];
+			if(config.debug)
+				LiveConsole.log("[debug] detected unused key: " + key);
 			delete config[key];
 		}
 
@@ -420,7 +433,7 @@ const commands = {
 		return Locale.get("OPENED_APP_FOLDER");
 	},
 	file: () => {
-		const song = downloaded[0];
+		const song = downloader.getDownloaded()[0];
 		if (!song) return Locale.get("NO_SONG_DOWNLOADED");
 		cp.exec(`explorer /select, ${song.finalFilePath}"`);
 	},

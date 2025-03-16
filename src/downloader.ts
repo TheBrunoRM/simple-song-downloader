@@ -13,12 +13,13 @@ import {
 	failedListFile,
 	quit_queued,
 	writeErrorStack,
+	config,
 } from "./index";
 import LiveConsole from "./liveconsole";
 import Locale from "./locale";
 
 const queue: Song[] = [];
-export const downloaded: Song[] = [];
+const downloaded: Song[] = [];
 
 function parseProvider(_url: string | URL) {
 	let url;
@@ -110,8 +111,10 @@ function processQueue() {
 		if (!listfile.includes(song.url))
 			fs.appendFileSync(queueListFile, "\n" + song.url);
 
-		if (song.download_tries > 5) {
-			song.updateLine("Failed too many times, added to failed list.");
+		const failed_attempts = song.download_tries + song.process_tries;
+
+		if (song.download_tries >= config.max_download_tries) {
+			song.updateLine(song.lineText + `\nFailed too many times (${failed_attempts}), added to failed list.`);
 			if (!fs.existsSync(failedListFile))
 				fs.writeFileSync(failedListFile, "");
 			fs.appendFileSync(
@@ -123,12 +126,7 @@ function processQueue() {
 		}
 
 		if (song.failed) {
-			song.updateLine(
-				song.lineText +
-					`\nFailed, retrying later (${
-						song.download_tries + song.process_tries
-					} failed attempts)`
-			);
+			song.updateLine(song.lineText + `\nFailed, retrying later (${failed_attempts} failed attempts)`);
 			song.working = false;
 			song.failed = false;
 			// move the song from the first to the last in the queue
@@ -158,7 +156,7 @@ function processQueue() {
 				downloaded.unshift(song);
 				continue;
 			}
-			if (song.process_tries >= 3) {
+			if (song.process_tries >= config.max_process_tries) {
 				song.updateLine(Locale.get("DOWNLOADER.PROCESS_ERROR"));
 				if (!fs.existsSync(failedListFile))
 					fs.writeFileSync(failedListFile, "");
@@ -176,26 +174,26 @@ function processQueue() {
 
 		if (song.working || song.downloading || song.processing) continue;
 
-			try {
-				switch (song.provider) {
-					case SongProvider.YouTube:
-						youtube.queuer.add(song);
-						break;
-					case SongProvider.SoundCloud:
-						soundcloud.queuer.add(song);
-						break;
-					default:
-						song.updateLine(
-							Locale.get("PROVIDER.UNKNOWN", {
-								provider: song.provider,
-							})
-						);
-						continue;
-				}
-				song.working = true;
-				song.updateLine(Locale.get("DOWNLOADER.DOWNLOAD_WAITING"));
-			} catch (e) {
-				song.updateLine(Locale.get("DOWNLOADER.ERROR"));
+		try {
+			switch (song.provider) {
+				case SongProvider.YouTube:
+					youtube.queuer.add(song);
+					break;
+				case SongProvider.SoundCloud:
+					soundcloud.queuer.add(song);
+					break;
+				default:
+					song.updateLine(
+						Locale.get("PROVIDER.UNKNOWN", {
+							provider: song.provider,
+						})
+					);
+					continue;
+			}
+			song.working = true;
+			song.updateLine(Locale.get("DOWNLOADER.DOWNLOAD_WAITING"));
+		} catch (e) {
+			song.updateLine(Locale.get("DOWNLOADER.ERROR"));
 		}
 	}
 
