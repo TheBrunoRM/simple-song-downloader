@@ -15,8 +15,9 @@ import fetch from "node-fetch";
 import ffmpeg from "fluent-ffmpeg";
 import path from "path";
 import moment from "moment";
-import { chooseFormatOptions, Filter } from "@distube/ytdl-core";
+import { chooseFormatOptions, Cookie, Filter } from "@distube/ytdl-core";
 import { link } from "./ansi-escapes";
+import { getAgent } from "./youtube-downloader";
 
 let searchedTracks: Track[] = null;
 let selectingProvider = false;
@@ -97,9 +98,7 @@ export const credentials: Credentials = new Credentials();
 export function saveCredentials() {
 	fs.writeFileSync(
 		credentialsFilePath,
-		Object.keys(credentials)
-			.map((a) => `${a}:${credentials[a]}`)
-			.join("\n")
+		JSON.stringify(credentials, null, 4)
 	);
 	LiveConsole.outputLine.append(
 		"\n" +
@@ -152,25 +151,9 @@ function loadConfiguration() {
 }
 
 function loadCredentials() {
-	for (const line of fs
-		.readFileSync(credentialsFilePath)
-		.toString()
-		.split("\n")) {
-		let key = "";
-		let value = null;
-		let gettingValue = false;
-		for (const char of line.split("")) {
-			if (!gettingValue) {
-				if (char === ":") {
-					value = "";
-					gettingValue = true;
-				} else key += char;
-			} else {
-				value += char;
-			}
-		}
-		if (value) credentials[key] = value;
-	}
+	const _creds = JSON.parse(fs.readFileSync(credentialsFilePath).toString());
+	for(const _cred of Object.entries(_creds))
+		credentials[_cred[0]] = _cred[1];
 }
 
 /**
@@ -324,8 +307,8 @@ async function main() {
 }
 
 function start() {
-	loadCredentials();
 	loadConfiguration();
+	loadCredentials();
 
 	Locale.setLanguage(config.language);
 	Locale.load();
@@ -474,6 +457,9 @@ const commands = {
 	},
 	credentials: () => {
 		return JSON.stringify(credentials, null, 4);
+	},
+	cookies: () => {
+		return credentials.youtube_cookies.map(c => `${c["name"]}=${c["value"]}`).join("\n")
 	},
 	reload: () => {
 		loadConfiguration();

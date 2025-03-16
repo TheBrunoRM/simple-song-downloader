@@ -39,7 +39,7 @@ export async function download(song: Song) {
 	});
 	let error = null;
 	const info: videoInfo = await Promise.race([
-		ytdl.getInfo(url).catch((e) => {
+		ytdl.getInfo(url, {agent: getAgent()}).catch((e) => {
 			writeErrorStack(e.stack);
 			error = e;
 			return null;
@@ -109,15 +109,11 @@ export async function download(song: Song) {
 	let options: downloadOptions = {
 		...config.format,
 		highWaterMark: config.MAX_CONTENT_LENGTH,
-		requestOptions: {
-			headers: {
-				Cookie: credentials.youtube_cookie || "",
-			},
-		},
 		range: {
 			start: bytesWritten.length,
 			end: parseInt(format.contentLength),
 		},
+		agent: getAgent(),
 	};
 
 	if (bytesWritten.length >= parseInt(format.contentLength)) {
@@ -191,6 +187,13 @@ export async function download(song: Song) {
 	if (song.failed) return;
 
 	song.downloaded = true;
+}
+
+let cached_agent: Agent;
+export function getAgent() {
+	if(!cached_agent)
+		cached_agent = createAgent(credentials.youtube_cookies);
+	return cached_agent;
 }
 
 export async function work(song: Song) {
