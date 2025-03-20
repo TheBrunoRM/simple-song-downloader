@@ -46,6 +46,7 @@ function parseProvider(_url: string | URL) {
 }
 
 async function add(_url: string, _parentFolder?: string) {
+
 	const url = new URL(_url);
 	const provider = parseProvider(url);
 
@@ -95,6 +96,7 @@ function UpdateListFile() {
 }
 
 function processQueue() {
+
 	if (!fs.existsSync(queueListFile)) fs.writeFileSync(queueListFile, "");
 	const listfile = fs.readFileSync(queueListFile).toString().split("\n");
 
@@ -108,12 +110,13 @@ function processQueue() {
 	// so we modify the original queue
 	// instead of the copy
 	for (const song of [...queue]) {
+
 		if (!listfile.includes(song.url))
 			fs.appendFileSync(queueListFile, "\n" + song.url);
 
 		const failed_attempts = song.download_tries + song.process_tries;
 
-		if (song.download_tries >= config.max_download_tries) {
+		if (song.download_tries > config.max_download_tries) {
 			song.updateLine(song.lineText + `\nFailed too many times (${failed_attempts}), added to failed list.`);
 			if (!fs.existsSync(failedListFile))
 				fs.writeFileSync(failedListFile, "");
@@ -156,7 +159,8 @@ function processQueue() {
 				downloaded.unshift(song);
 				continue;
 			}
-			if (song.process_tries >= config.max_process_tries) {
+
+			if (song.process_tries > config.max_process_tries) {
 				song.updateLine(Locale.get("DOWNLOADER.PROCESS_ERROR"));
 				if (!fs.existsSync(failedListFile))
 					fs.writeFileSync(failedListFile, "");
@@ -167,6 +171,7 @@ function processQueue() {
 				queue.splice(queue.indexOf(song), 1);
 				continue;
 			}
+			
 			song.updateLine(Locale.get("DOWNLOADER.PROCESS_WAITING"));
 			processer.queuer.add(song);
 			continue;
@@ -198,6 +203,7 @@ function processQueue() {
 	}
 
 	UpdateListFile();
+	
 	if (queue.length <= 0) {
 		if (quit_queued) process.exit();
 		else if (!outputLineOccupied)

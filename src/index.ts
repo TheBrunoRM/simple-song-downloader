@@ -48,8 +48,8 @@ class ConfigurationStructure {
 	identation: number = 2;
 	debug: boolean = false;
 	suggestRate: number = 1000;
-	max_download_tries: number = 5;
-	max_process_tries: number = 3;
+	max_download_tries: number = 2;
+	max_process_tries: number = 2;
 	check_for_updates: boolean = true;
 	ffmpegPath: string = "";
 	suggestionColor: number = 36;
